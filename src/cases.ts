@@ -14,7 +14,7 @@ export const cases: CaseManifest[] = [
     failureDescription:
       "A card row holds a label, an unbreakable URL, and an action. The URL has no spaces, so the flex item’s default min-width:auto keeps it as wide as the token. The card cannot contain the row: the text overflows and the action is pushed out of the card.",
     reproductionCondition:
-      "Viewport 390×640. Open the fixture directly. The card is a flex row with a long URL that contains no spaces or wrapping hints.",
+      "Viewport 390×640. A 252px-wide flex card holds an unbreakable 35-character URL and a Copy action.",
     explanation:
       "A flex item’s automatic minimum size is its content size. Without min-width:0 the text column will not shrink below the URL’s max-content width, so the token overflows the card and the action is pushed out. overflow-wrap:anywhere lets the same characters wrap inside the column so the action stays in the card. Do not delete the URL, hide it, or shrink the font until it is unreadable.",
     viewport: { width: 390, height: 640 },

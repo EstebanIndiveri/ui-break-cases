@@ -10,7 +10,7 @@ This repository is a small, local collection of interface failures. Each case sh
 
 It is for people who write UI tests or CSS and want a concrete example to copy. It is not a scanner, a benchmark, or a claim that these are the only bugs that matter.
 
-![Side-by-side of the three fixtures. Left column broken, right column fixed, with capture-only red outlines: a long URL overflowing a flex card while Copy stays on screen; a status sentence clipped to one line; Confirm booking covered by a fixed footer.](docs/media/broken-vs-fixed.gif)
+![Side-by-side comparison of the three fixtures. Left column broken, right column fixed, with capture-only red outlines: a long URL overflowing a flex card while Copy stays on screen; a status sentence clipped to one line; Confirm booking covered by a fixed footer.](docs/media/broken-vs-fixed.gif)
 
 ```bash
 npm ci
@@ -18,7 +18,7 @@ npx playwright install chromium
 npm test
 ```
 
-The animation is captured from the real fixtures with Playwright. Red outlines and large BROKEN/FIXED labels are capture-only overlays; they are not part of the fixtures or the tests. Regenerate it with `npm run capture:demo` (needs Playwright Chromium and a system `ffmpeg` binary; not an npm package).
+The side-by-side comparison is captured from the real fixtures with Playwright. Red outlines and large BROKEN/FIXED labels are capture-only overlays; they are not part of the fixtures or the tests. Regenerate it with `npm run capture:demo` (needs Playwright Chromium and a system `ffmpeg` binary; not an npm package).
 
 ## Requirements
 
@@ -115,7 +115,6 @@ Limitations:
 - Geometry helpers are fixture-specific.
 - No URL scanner, backend, accounts, LLM, MCP, browser extension, npm publish, or extra cases.
 - Screenshots are evidence, not the assertion.
-- Gallery links labeled **Fixture source** and **Playwright test** point at `main` on GitHub. That is the intended post-merge location; they 404 until this branch is merged.
 - GitHub Pages is not enabled. The live demo URL below is the intended address after a later publish.
 
 ## Live demo (coming soon)
