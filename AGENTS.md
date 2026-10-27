@@ -2,7 +2,7 @@
 
 ## Environment
 
-- Node 22+ (`.nvmrc` is `22`). npm 10+.
+- Node 22.12.0 or newer (`.nvmrc` is `22.12.0`, matching `package.json` `engines`). npm 10+.
 - Install from the lockfile: `npm ci`.
 - Chromium is the only verified browser:
 
@@ -22,6 +22,7 @@ npx playwright install --with-deps chromium
 | `npm run build:pages` | Same build with `base` `/ui-break-cases/` |
 | `npm run preview` | Serve `dist/` at port 4173 |
 | `npm test` | Build, preview, Playwright Chromium |
+| `npm run check:pages` | `build:pages`, serve `dist/` at `/ui-break-cases/`, assert gallery + assets + 9 fixtures return 200 |
 
 Tests hit the preview server, not `npm run dev`. If preview is already running on 4173, Playwright reuses it outside CI.
 
@@ -45,7 +46,7 @@ New cases: follow `docs/adding-a-case.md`.
 
 ## Decisions (v0.1)
 
-- Vite 8.3.5, TypeScript 5.9, Playwright 1.64, Node 22.
+- Vite 8.3.5, TypeScript 5.9, Playwright 1.64, Node 22.12.0 or newer.
 - Default Vite `base` is `./` (works locally and as a GitHub Pages project site). Optional `VITE_BASE=/ui-break-cases/` (`npm run build:pages`) writes absolute asset URLs. Vite preview will still serve `public/fixtures` at `/fixtures/`; GitHub Pages serves them at `/ui-break-cases/fixtures/` because the whole `dist/` tree is mounted there.
 - `appType` is `mpa` so fixture HTML is not replaced by the gallery `index.html`.
 - Shared copy is duplicated in HTML and in `src/cases.ts` so fixtures stay standalone. Keep them in sync by hand.

@@ -10,7 +10,7 @@ It is for people who write UI tests or CSS and want a concrete example to copy. 
 
 ## Requirements
 
-- Node.js 22 or newer (see `.nvmrc`)
+- Node.js 22.12.0 or newer (`.nvmrc` and `package.json` `engines` use this floor)
 - npm 10+
 - Playwright’s Chromium browser (installed separately, see below)
 
@@ -34,6 +34,14 @@ npm run preview
 `npm run preview` serves `dist/` at [http://127.0.0.1:4173/](http://127.0.0.1:4173/). The Vite `base` is `./`, so asset and fixture URLs stay relative and the same `dist/` folder can be published as a GitHub Pages project site.
 
 `npm run build:pages` bakes absolute `/ui-break-cases/` asset URLs. Upload the contents of `dist/` as that project site. Vite’s preview server does not remount `public/` files under the prefix; GitHub Pages does, because it serves the whole `dist/` tree at `/ui-break-cases/`.
+
+Check that prefix the same way CI does (no extra packages):
+
+```bash
+npm run check:pages
+```
+
+That script builds with `VITE_BASE=/ui-break-cases/`, serves `dist/` under `/ui-break-cases/`, and asserts HTTP 200 for the gallery, hashed assets, and all nine fixture URLs.
 
 ## Chromium for Playwright
 
@@ -95,7 +103,7 @@ Copy the helper that matches your bug from `tests/helpers.ts`. Do not treat thos
 - Broken tests pass by asserting the defect. They are not skipped and not marked as expected failures.
 - Fixed tests keep the original copy and check that the control still works.
 - Control tests check the intentional behavior, including the expanded summary.
-- `npm ci`, `npm run typecheck`, `npm run build`, `npm run preview`, and `npm test` (Chromium) are the supported commands.
+- `npm ci`, `npm run typecheck`, `npm run build`, `npm run preview`, `npm test` (Chromium), and `npm run check:pages` are the supported commands.
 - The gallery is keyboard-usable and keeps footer iframes at 360×500.
 
 Limitations:
@@ -104,6 +112,7 @@ Limitations:
 - Geometry helpers are fixture-specific.
 - No URL scanner, backend, accounts, LLM, MCP, browser extension, npm publish, or extra cases.
 - Screenshots are evidence, not the assertion.
+- Gallery links labeled **Fixture source** and **Playwright test** point at `main` on GitHub. That is the intended post-merge location; they 404 until this branch is merged.
 
 ## Contribute
 

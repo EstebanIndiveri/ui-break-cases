@@ -14,6 +14,7 @@
     "build:pages": "VITE_BASE=/ui-break-cases/ vite build",
     "preview": "vite preview",
     "test": "playwright test",
+    "check:pages": "node scripts/check-pages.mjs",
     "screenshots": "playwright test tests/screenshots.spec.ts"
   },
   "repository": {

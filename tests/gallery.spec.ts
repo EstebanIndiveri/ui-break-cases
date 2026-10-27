@@ -40,6 +40,39 @@ test.describe("gallery", () => {
     await expect(iframe).toHaveAttribute("height", String(flex.viewport.height));
   });
 
+  test("Home and End move to the first and last variant tabs", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.goto("./?case=flex-long-text&variant=fixed");
+
+    const flex = cases[0];
+    await page.getByRole("tab", { name: "Fixed" }).focus();
+    await page.keyboard.press("End");
+
+    await expect(page.getByRole("tab", { name: "Control" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page).toHaveURL(/variant=control/);
+    await expect(page.locator("iframe[data-preview]")).toHaveAttribute(
+      "src",
+      new RegExp(`${flex.variants.control.path}$`),
+    );
+
+    await page.keyboard.press("Home");
+
+    await expect(page.getByRole("tab", { name: "Broken" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page).toHaveURL(/variant=broken/);
+    await expect(page.locator("iframe[data-preview]")).toHaveAttribute(
+      "src",
+      new RegExp(`${flex.variants.broken.path}$`),
+    );
+  });
+
   test("footer preview stays at the declared height instead of growing with content", async ({
     page,
   }) => {
