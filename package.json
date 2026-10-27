@@ -1,0 +1,32 @@
+{
+  "name": "ui-break-cases",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reproducible UI bugs, explained fixes, and tests you can reuse.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.playwright.json",
+    "build": "vite build",
+    "build:pages": "VITE_BASE=/ui-break-cases/ vite build",
+    "preview": "vite preview",
+    "test": "playwright test",
+    "check:pages": "node scripts/check-pages.mjs",
+    "capture:demo": "node scripts/capture-readme-gif.mjs",
+    "screenshots": "playwright test tests/screenshots.spec.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EstebanIndiveri/ui-break-cases.git"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "^22.18.8",
+    "typescript": "5.9.3",
+    "vite": "8.3.5"
+  }
+}
