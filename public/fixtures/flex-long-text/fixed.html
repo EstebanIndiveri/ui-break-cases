@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>flex-long-text — fixed</title>
+    <style>
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #f4f1ea;
+        color: #1c1917;
+      }
+      .banner {
+        margin: 0;
+        padding: 8px 16px;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: #14532d;
+        color: #ecfdf3;
+      }
+      main {
+        padding: 16px;
+      }
+      #card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        padding: 16px;
+        background: #fff;
+        border: 1px solid #d6d3d1;
+        border-radius: 12px;
+      }
+      .body {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .kicker {
+        margin: 0 0 6px;
+        font-size: 12px;
+        color: #57534e;
+      }
+      #long-text {
+        margin: 0;
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+      }
+      #action {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        background: #1d4ed8;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="banner">Fixed · flex-long-text · 390×640</p>
+    <main>
+      <article id="card">
+        <div class="body" id="text-column">
+          <p class="kicker">Webhook target</p>
+          <p id="long-text">
+            https://api.example.test/v1/organizations/northwind-trading/projects/inventory-sync-webhooks/endpoints/evt_9f3c2a1b8d7e6f5c4b3a291807
+          </p>
+        </div>
+        <a id="action" href="#copy">Copy</a>
+      </article>
+    </main>
+  </body>
+</html>

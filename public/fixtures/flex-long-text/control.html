@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>flex-long-text — control</title>
+    <style>
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #f4f1ea;
+        color: #1c1917;
+      }
+      .banner {
+        margin: 0;
+        padding: 8px 16px;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: #1e3a5f;
+        color: #eff6ff;
+      }
+      main {
+        padding: 16px;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+      .lede {
+        margin: 0 0 16px;
+        color: #44403c;
+        font-size: 14px;
+      }
+      #code-block {
+        margin: 0;
+        padding: 12px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        background: #1c1917;
+        color: #f5f5f4;
+        border-radius: 8px;
+        overflow-x: auto;
+        white-space: nowrap;
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      #long-text {
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="banner">Control · flex-long-text · 390×640</p>
+    <main>
+      <h1>Signed request</h1>
+      <p class="lede">
+        The page stays within the viewport. Scroll the code block to read the
+        full endpoint token.
+      </p>
+      <pre id="code-block"><code id="long-text">https://api.example.test/v1/organizations/northwind-trading/projects/inventory-sync-webhooks/endpoints/evt_9f3c2a1b8d7e6f5c4b3a291807</code></pre>
+    </main>
+  </body>
+</html>
