@@ -6,7 +6,25 @@ This repository is a small, local collection of interface failures. Each case sh
 
 It is for people who write UI tests or CSS and want a concrete example to copy. It is not a scanner, a benchmark, or a claim that these are the only bugs that matter.
 
-![Gallery showing the long-token flex case](docs/screenshots/gallery.png)
+![Animation of the three fixtures. Top: a long URL overflowing a flex card. Middle: a status sentence clipped to one line. Bottom: Confirm booking covered by a fixed footer. The clip alternates between the broken layout and the fixed layout.](docs/media/broken-vs-fixed.gif)
+
+The animation is captured from the real fixtures with Playwright, then encoded with ffmpeg. Regenerate it with `npm run capture:demo` (needs Playwright Chromium and a system `ffmpeg` binary; not an npm package).
+
+## Live demo
+
+GitHub Pages is **not enabled yet**. Do not turn it on from this change.
+
+When it is published later, the gallery is expected at:
+
+https://estebanindiveri.github.io/ui-break-cases/
+
+To produce that build:
+
+```bash
+npm run build:pages
+```
+
+That writes `dist/` with asset URLs under `/ui-break-cases/`. Upload the contents of `dist/` as the GitHub Pages project site. `npm run check:pages` serves the same tree locally and asserts HTTP 200 for the gallery, hashed assets, and all nine fixtures.
 
 ## Requirements
 
@@ -31,17 +49,7 @@ npm run build
 npm run preview
 ```
 
-`npm run preview` serves `dist/` at [http://127.0.0.1:4173/](http://127.0.0.1:4173/). The Vite `base` is `./`, so asset and fixture URLs stay relative and the same `dist/` folder can be published as a GitHub Pages project site.
-
-`npm run build:pages` bakes absolute `/ui-break-cases/` asset URLs. Upload the contents of `dist/` as that project site. Vite’s preview server does not remount `public/` files under the prefix; GitHub Pages does, because it serves the whole `dist/` tree at `/ui-break-cases/`.
-
-Check that prefix the same way CI does (no extra packages):
-
-```bash
-npm run check:pages
-```
-
-That script builds with `VITE_BASE=/ui-break-cases/`, serves `dist/` under `/ui-break-cases/`, and asserts HTTP 200 for the gallery, hashed assets, and all nine fixture URLs.
+`npm run preview` serves `dist/` at [http://127.0.0.1:4173/](http://127.0.0.1:4173/). The Vite `base` is `./`, so asset and fixture URLs stay relative. Vite’s preview server does not remount `public/` files under `/ui-break-cases/`; see [Live demo](#live-demo) for the Pages build.
 
 ## Chromium for Playwright
 
@@ -105,6 +113,7 @@ Copy the helper that matches your bug from `tests/helpers.ts`. Do not treat thos
 - Control tests check the intentional behavior, including the expanded summary.
 - `npm ci`, `npm run typecheck`, `npm run build`, `npm run preview`, `npm test` (Chromium), and `npm run check:pages` are the supported commands.
 - The gallery is keyboard-usable and keeps footer iframes at 360×500.
+- `.github/workflows/ci.yml` is in the repo. GitHub Actions is currently disabled on this repository, so those checks are not run on GitHub. Verification is `npm ci`, `typecheck`, `build`, `test`, and `check:pages` in Cursor Cloud.
 
 Limitations:
 
@@ -113,6 +122,7 @@ Limitations:
 - No URL scanner, backend, accounts, LLM, MCP, browser extension, npm publish, or extra cases.
 - Screenshots are evidence, not the assertion.
 - Gallery links labeled **Fixture source** and **Playwright test** point at `main` on GitHub. That is the intended post-merge location; they 404 until this branch is merged.
+- GitHub Pages is not enabled. The live demo URL above is the intended address after a later publish.
 
 ## Contribute
 

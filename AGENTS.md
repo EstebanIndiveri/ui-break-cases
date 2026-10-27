@@ -23,8 +23,13 @@ npx playwright install --with-deps chromium
 | `npm run preview` | Serve `dist/` at port 4173 |
 | `npm test` | Build, preview, Playwright Chromium |
 | `npm run check:pages` | `build:pages`, serve `dist/` at `/ui-break-cases/`, assert gallery + assets + 9 fixtures return 200 |
+| `npm run capture:demo` | Playwright screenshots of broken/fixed fixtures + system `ffmpeg` → `docs/media/broken-vs-fixed.gif` |
 
 Tests hit the preview server, not `npm run dev`. If preview is already running on 4173, Playwright reuses it outside CI.
+
+`.github/workflows/ci.yml` is in the repo. GitHub Actions is currently disabled on this repository. Do not enable Actions, re-run workflows, or enable GitHub Pages. Verify with `npm ci`, `npm run typecheck`, `npm run build`, `npm test`, and `npm run check:pages` in Cursor Cloud.
+
+`npm run capture:demo` needs a system `ffmpeg` binary. It is not an npm dependency. The GIF is a committed artifact; do not invent or hand-edit frames.
 
 ## Invariants for this repo
 
@@ -47,7 +52,7 @@ New cases: follow `docs/adding-a-case.md`.
 ## Decisions (v0.1)
 
 - Vite 8.3.5, TypeScript 5.9, Playwright 1.64, Node 22.12.0 or newer.
-- Default Vite `base` is `./` (works locally and as a GitHub Pages project site). Optional `VITE_BASE=/ui-break-cases/` (`npm run build:pages`) writes absolute asset URLs. Vite preview will still serve `public/fixtures` at `/fixtures/`; GitHub Pages serves them at `/ui-break-cases/fixtures/` because the whole `dist/` tree is mounted there.
+- Default Vite `base` is `./`. Optional `VITE_BASE=/ui-break-cases/` (`npm run build:pages`) writes absolute asset URLs. Vite preview still serves `public/fixtures` at `/fixtures/`. GitHub Pages is not enabled; when it is, that tree is served at `/ui-break-cases/`.
 - `appType` is `mpa` so fixture HTML is not replaced by the gallery `index.html`.
 - Shared copy is duplicated in HTML and in `src/cases.ts` so fixtures stay standalone. Keep them in sync by hand.
 - Tolerance: 4px. Defects are built to exceed 16px.
