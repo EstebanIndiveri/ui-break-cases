@@ -213,6 +213,17 @@ body {
   color: var(--accent);
 }
 
+.source-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 6px;
+}
+
+.source-list a {
+  color: var(--accent);
+}
+
 .limits {
   margin: 0;
   padding-left: 1.2rem;

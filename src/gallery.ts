@@ -3,6 +3,7 @@ import type { CaseManifest, VariantId } from "./types.ts";
 
 const VARIANT_ORDER: VariantId[] = ["broken", "fixed", "control"];
 const REPO = "https://github.com/EstebanIndiveri/ui-break-cases";
+const PREVIEW_ID = "preview";
 
 function text(tag: string, value: string, className?: string): HTMLElement {
   const node = document.createElement(tag);
@@ -39,6 +40,29 @@ function githubBlob(repoPath: string): string {
   return `${REPO}/blob/main/${repoPath}`;
 }
 
+function linkList(
+  title: string,
+  items: { label: string; href: string }[],
+): HTMLElement[] {
+  if (items.length === 0) {
+    return [];
+  }
+  const heading = text("h3", title);
+  const list = document.createElement("ul");
+  list.className = "source-list";
+  for (const item of items) {
+    const li = document.createElement("li");
+    const anchor = document.createElement("a");
+    anchor.href = item.href;
+    anchor.target = "_blank";
+    anchor.rel = "noreferrer";
+    anchor.textContent = item.label;
+    li.append(anchor);
+    list.append(li);
+  }
+  return [heading, list];
+}
+
 export function mountGallery(root: HTMLElement): void {
   let { caseId, variant } = selectedFromUrl();
   if (!cases.some((item) => item.id === caseId)) {
@@ -69,7 +93,6 @@ export function mountGallery(root: HTMLElement): void {
 
   const panel = document.createElement("section");
   panel.className = "panel";
-  panel.setAttribute("aria-live", "polite");
   let restoreTabFocus = false;
 
   const render = (): void => {
@@ -148,7 +171,7 @@ function renderPanel(
     tab.dataset.variant = id;
     tab.setAttribute("role", "tab");
     tab.setAttribute("aria-selected", id === variant ? "true" : "false");
-    tab.setAttribute("aria-controls", "preview");
+    tab.setAttribute("aria-controls", PREVIEW_ID);
     tab.tabIndex = id === variant ? 0 : -1;
     tab.textContent = current.variants[id].label;
     tab.addEventListener("click", () => onVariant(id));
@@ -174,17 +197,20 @@ function renderPanel(
     }
   });
 
-  const previewWrap = document.createElement("div");
-  previewWrap.className = "preview-scroll";
+  const tabpanel = document.createElement("div");
+  tabpanel.id = PREVIEW_ID;
+  tabpanel.className = "preview-scroll";
+  tabpanel.setAttribute("role", "tabpanel");
+  tabpanel.setAttribute("aria-labelledby", `tab-${variant}`);
+
   const iframe = document.createElement("iframe");
-  iframe.id = "preview";
   iframe.dataset.preview = "true";
   iframe.title = `${current.id} ${variant} variant, ${current.viewport.width}×${current.viewport.height}`;
   iframe.src = fixtureUrl(chosen.path);
   iframe.width = String(current.viewport.width);
   iframe.height = String(current.viewport.height);
   iframe.setAttribute("scrolling", "yes");
-  previewWrap.append(iframe);
+  tabpanel.append(iframe);
 
   const viewportNote = text(
     "p",
@@ -234,7 +260,7 @@ function renderPanel(
     conditionLabel,
     condition,
     tablist,
-    previewWrap,
+    tabpanel,
     viewportNote,
     expected,
     expectedBody,
@@ -242,6 +268,8 @@ function renderPanel(
     whyBody,
     change,
     links,
+    ...linkList("Sources", current.provenance.sources),
+    ...linkList("Further reading", current.links),
     limitsTitle,
     limits,
     provenance,

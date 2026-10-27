@@ -4,6 +4,7 @@ import {
   CLEAR_DEFECT_PX,
   GEOM_TOLERANCE_PX,
   boundingRect,
+  clickCenter,
   documentHorizontalOverflow,
   expectInViewport,
   expectInside,
@@ -39,6 +40,7 @@ test.describe("flex-long-text", () => {
 
     expect(overflow).toBeGreaterThan(CLEAR_DEFECT_PX);
     expect(action.right).toBeGreaterThan(card.right + CLEAR_DEFECT_PX);
+    expectInViewport(action, spec.viewport);
   });
 
   test("fixed: the same URL stays in the card and Copy remains hittable", async ({
@@ -60,6 +62,8 @@ test.describe("flex-long-text", () => {
 
     const hit = await hitTestCenter(page, "#action");
     expect(hit.hit?.id).toBe("action");
+    await clickCenter(page, hit);
+    await expect(page.locator("#action-status")).toHaveText("Copied");
   });
 
   test("control: page stays contained; the code block scrolls to the full token", async ({

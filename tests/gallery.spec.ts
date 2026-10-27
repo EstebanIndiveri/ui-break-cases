@@ -38,6 +38,15 @@ test.describe("gallery", () => {
     );
     await expect(iframe).toHaveAttribute("width", String(flex.viewport.width));
     await expect(iframe).toHaveAttribute("height", String(flex.viewport.height));
+
+    const panel = page.getByRole("tabpanel");
+    await expect(panel).toHaveAttribute("id", "preview");
+    await expect(panel).toHaveAttribute("aria-labelledby", "tab-fixed");
+    await expect(page.getByRole("tab", { name: "Fixed" })).toHaveAttribute(
+      "aria-controls",
+      "preview",
+    );
+    await expect(page.locator(".panel")).not.toHaveAttribute("aria-live");
   });
 
   test("Home and End move to the first and last variant tabs", async ({
@@ -71,6 +80,31 @@ test.describe("gallery", () => {
       "src",
       new RegExp(`${flex.variants.broken.path}$`),
     );
+    await expect(page.getByRole("tabpanel")).toHaveAttribute(
+      "aria-labelledby",
+      "tab-broken",
+    );
+  });
+
+  test("gallery lists provenance sources and further-reading links", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.goto("./?case=flex-long-text&variant=broken");
+
+    const spec = cases[0];
+    for (const source of spec.provenance.sources) {
+      await expect(page.getByRole("link", { name: source.label })).toHaveAttribute(
+        "href",
+        source.href,
+      );
+    }
+    for (const item of spec.links) {
+      await expect(page.getByRole("link", { name: item.label })).toHaveAttribute(
+        "href",
+        item.href,
+      );
+    }
   });
 
   test("footer preview stays at the declared height instead of growing with content", async ({

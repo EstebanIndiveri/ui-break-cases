@@ -90,7 +90,13 @@
         at the end of the page.
       </p>
       <button id="last-action" type="button">Confirm booking</button>
+      <p id="action-status" hidden>Booking confirmed</p>
     </main>
     <footer id="site-footer">Need help? Desk line 555-0142</footer>
+    <script>
+      document.getElementById("last-action").addEventListener("click", () => {
+        document.getElementById("action-status").hidden = false;
+      });
+    </script>
   </body>
 </html>

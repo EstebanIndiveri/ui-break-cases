@@ -27,7 +27,7 @@ npx playwright install --with-deps chromium
 
 Tests hit the preview server, not `npm run dev`. If preview is already running on 4173, Playwright reuses it outside CI.
 
-`.github/workflows/ci.yml` is in the repo. GitHub Actions is currently disabled on this repository. Do not enable Actions, re-run workflows, or enable GitHub Pages. Verify with `npm ci`, `npm run typecheck`, `npm run build`, `npm test`, and `npm run check:pages` in Cursor Cloud.
+A CI workflow is included (`.github/workflows/ci.yml`); GitHub Actions is currently disabled, so run the checks locally.
 
 `npm run capture:demo` needs a system `ffmpeg` binary. It is not an npm dependency. The GIF is a committed artifact; do not invent or hand-edit frames.
 

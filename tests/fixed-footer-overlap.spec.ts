@@ -4,6 +4,7 @@ import {
   CLEAR_DEFECT_PX,
   GEOM_TOLERANCE_PX,
   boundingRect,
+  clickCenter,
   expectInViewport,
   hitTestCenter,
   openFixture,
@@ -59,6 +60,8 @@ test.describe("fixed-footer-overlap", () => {
     expect(action.bottom).toBeLessThanOrEqual(footer.top + GEOM_TOLERANCE_PX);
     expectInViewport(action, spec.viewport);
     expect(hit.hit?.id).toBe("last-action");
+    await clickCenter(page, hit);
+    await expect(page.locator("#action-status")).toHaveText("Booking confirmed");
   });
 
   test("control: a fixed bar with a spacer leaves the last control usable", async ({

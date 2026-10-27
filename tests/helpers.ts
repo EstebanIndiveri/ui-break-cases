@@ -149,6 +149,17 @@ export function overflowIsHidden(clip: {
 /**
  * Hit-test the center of an element before any click that could scroll it into view.
  */
+/**
+ * Click the already-measured center. Do not use locator.click — that can
+ * scrollIntoView and hide an overlap or overflow defect.
+ */
+export async function clickCenter(
+  page: Page,
+  point: { x: number; y: number },
+): Promise<void> {
+  await page.mouse.click(point.x, point.y);
+}
+
 export async function hitTestCenter(
   page: Page,
   selector: string,

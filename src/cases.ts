@@ -1,7 +1,6 @@
 import type { CaseManifest } from "./types.ts";
 
-export const FLEX_LONG_TEXT =
-  "https://api.example.test/v1/organizations/northwind-trading/projects/inventory-sync-webhooks/endpoints/evt_9f3c2a1b8d7e6f5c4b3a291807";
+export const FLEX_LONG_TEXT = "https://api.example.test/evt_9f3c2a";
 
 export const CLIP_LABEL_TEXT =
   "Delayed at the distribution hub because the outbound scan failed validation for carton NW-4418";
@@ -17,7 +16,7 @@ export const cases: CaseManifest[] = [
     reproductionCondition:
       "Viewport 390×640. Open the fixture directly. The card is a flex row with a long URL that contains no spaces or wrapping hints.",
     explanation:
-      "Flex items refuse to shrink below their content size unless min-width is set. overflow-wrap lets the same characters wrap inside the column so the action stays in the card. Do not delete the URL, hide it, or shrink the font until it is unreadable.",
+      "A flex item’s automatic minimum size is its content size. Without min-width:0 the text column will not shrink below the URL’s max-content width, so the token overflows the card and the action is pushed out. overflow-wrap:anywhere lets the same characters wrap inside the column so the action stays in the card. Do not delete the URL, hide it, or shrink the font until it is unreadable.",
     viewport: { width: 390, height: 640 },
     sharedContent: FLEX_LONG_TEXT,
     variants: {
@@ -26,10 +25,10 @@ export const cases: CaseManifest[] = [
         label: "Broken",
         path: "fixtures/flex-long-text/broken.html",
         expectedBehavior:
-          "The URL or its column overflows the card by a clear margin and the Copy action is pushed outside the card bounds.",
+          "The URL or its column overflows the card by a clear margin and the Copy action is pushed outside the card bounds, while remaining inside the viewport.",
         summary: "Unbreakable URL blows out a flex row.",
         relevantChange:
-          "No min-width:0 on the text column. #long-text { white-space: nowrap; } so the token cannot wrap.",
+          "No min-width:0 on the text column. The flex item keeps min-width:auto, so it sizes to the URL’s max-content width.",
       },
       fixed: {
         id: "fixed",
@@ -57,8 +56,8 @@ export const cases: CaseManifest[] = [
       note: "Original fixture. The overflow pattern is the well-known flex min-width:auto behavior, not a pixel-perfect copy of a single production bug.",
       sources: [
         {
-          label: "Flexbugs #1",
-          href: "https://github.com/philipwalton/flexbugs#flexbug-1",
+          label: "CSS Flexbox: min-size:auto",
+          href: "https://www.w3.org/TR/css-flexbox-1/#min-size-auto",
         },
         {
           label: "Defensive CSS",

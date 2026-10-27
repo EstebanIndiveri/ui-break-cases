@@ -30,7 +30,7 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        width: 100%;
+        width: 252px;
         box-sizing: border-box;
         padding: 16px;
         background: #fff;
@@ -50,7 +50,6 @@
         font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
         font-size: 13px;
         line-height: 1.4;
-        white-space: nowrap;
       }
       #action {
         flex: 0 0 auto;
@@ -74,12 +73,17 @@
       <article id="card">
         <div class="body" id="text-column">
           <p class="kicker">Webhook target</p>
-          <p id="long-text">
-            https://api.example.test/v1/organizations/northwind-trading/projects/inventory-sync-webhooks/endpoints/evt_9f3c2a1b8d7e6f5c4b3a291807
-          </p>
+          <p id="long-text">https://api.example.test/evt_9f3c2a</p>
         </div>
         <a id="action" href="#copy">Copy</a>
       </article>
+      <p id="action-status" hidden>Copied</p>
     </main>
+    <script>
+      document.getElementById("action").addEventListener("click", (event) => {
+        event.preventDefault();
+        document.getElementById("action-status").hidden = false;
+      });
+    </script>
   </body>
 </html>
