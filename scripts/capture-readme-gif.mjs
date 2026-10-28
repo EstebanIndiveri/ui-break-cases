@@ -33,6 +33,7 @@ const BG = "0xf4f1ea";
 const TAGLINE =
   "Reproducible UI bugs, explained fixes, and tests you can reuse.";
 const FONT_BOLD = "/usr/share/fonts/truetype/macos/Inter-Bold.ttf";
+const FONT_REGULAR = "/usr/share/fonts/truetype/macos/Inter-Regular.ttf";
 
 const CASES = [
   {
@@ -123,7 +124,7 @@ async function injectCaptureOverlay(page, item, variant, labelText) {
   );
 }
 
-async function captureVariant(page, item, variant, dest, labelText) {
+async function captureVariant(page, item, variant, dest, labelText, clip = item.clip) {
   const file = path.join(
     ROOT,
     "public",
@@ -143,7 +144,7 @@ async function captureVariant(page, item, variant, dest, labelText) {
     });
   }
   await injectCaptureOverlay(page, item, variant, labelText);
-  await page.screenshot({ path: dest, clip: item.clip });
+  await page.screenshot({ path: dest, clip });
 }
 
 async function encodeGif(listPath, dest, maxBytes) {
@@ -332,10 +333,16 @@ async function writePerCase(tmp) {
 
 async function writeSocial(page, tmp) {
   const flex = CASES[0];
+  const socialClip = { x: 0, y: 0, width: 390, height: 260 };
   const brokenSrc = path.join(tmp, "social-flex-broken.png");
   const fixedSrc = path.join(tmp, "social-flex-fixed.png");
-  await captureVariant(page, flex, "broken", brokenSrc, "");
-  await captureVariant(page, flex, "fixed", fixedSrc, "");
+  const hi = await page.context().browser().newPage({ deviceScaleFactor: 2 });
+  try {
+    await captureVariant(hi, flex, "broken", brokenSrc, "", socialClip);
+    await captureVariant(hi, flex, "fixed", fixedSrc, "", socialClip);
+  } finally {
+    await hi.close();
+  }
   const html = path.join(tmp, "social.html");
   await writeFile(
     html,
@@ -349,6 +356,11 @@ async function writeSocial(page, tmp) {
         src: url("file://${FONT_BOLD}");
         font-weight: 700;
       }
+      @font-face {
+        font-family: InterCapture;
+        src: url("file://${FONT_REGULAR}");
+        font-weight: 400;
+      }
       html, body {
         margin: 0;
         width: 1280px;
@@ -361,62 +373,94 @@ async function writeSocial(page, tmp) {
         box-sizing: border-box;
         width: 1280px;
         height: 640px;
-        padding: 36px 48px 32px;
+        padding: 40px;
         display: flex;
         flex-direction: column;
-        gap: 24px;
+        gap: 14px;
       }
+      header { text-align: center; }
       h1 {
         margin: 0;
-        font-size: 36px;
-        line-height: 1.2;
-        letter-spacing: -0.03em;
-        text-align: center;
+        font-size: 52px;
+        line-height: 1.05;
+        letter-spacing: -0.04em;
         font-weight: 700;
+      }
+      .tagline {
+        margin: 8px 0 0;
+        font-size: 22px;
+        line-height: 1.3;
+        font-weight: 400;
+        color: #44403c;
       }
       .row {
         display: flex;
-        gap: 24px;
+        gap: 20px;
         justify-content: center;
         flex: 1;
         min-height: 0;
       }
       figure {
         margin: 0;
+        flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
         min-width: 0;
+        min-height: 0;
       }
       figcaption {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: lowercase;
+        letter-spacing: 0.08em;
       }
-      img {
-        display: block;
-        width: 560px;
-        height: auto;
+      .broken { color: #9f1239; }
+      .fixed { color: #047857; }
+      .frame {
+        flex: 1;
+        min-height: 0;
+        position: relative;
+        overflow: hidden;
         border: 1px solid #d6d3d1;
         border-radius: 12px;
         background: #fff;
+      }
+      .frame img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top center;
+        display: block;
+      }
+      .sub {
+        margin: 0;
+        text-align: center;
+        font-size: 16px;
+        line-height: 1.3;
+        font-weight: 400;
+        color: #57534e;
       }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <h1>${TAGLINE}</h1>
+      <header>
+        <h1>ui-break-cases</h1>
+        <p class="tagline">${TAGLINE}</p>
+      </header>
       <div class="row">
         <figure>
-          <figcaption>broken</figcaption>
-          <img src="${pathToFileURL(brokenSrc).href}" alt="" />
+          <figcaption class="broken">BROKEN</figcaption>
+          <div class="frame"><img src="${pathToFileURL(brokenSrc).href}" alt="" /></div>
         </figure>
         <figure>
-          <figcaption>fixed</figcaption>
-          <img src="${pathToFileURL(fixedSrc).href}" alt="" />
+          <figcaption class="fixed">FIXED</figcaption>
+          <div class="frame"><img src="${pathToFileURL(fixedSrc).href}" alt="" /></div>
         </figure>
       </div>
+      <p class="sub">flexbox overflow · clipped text · fixed footer overlap — Playwright tests</p>
     </div>
   </body>
 </html>
