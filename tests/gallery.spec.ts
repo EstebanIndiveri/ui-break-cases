@@ -5,6 +5,19 @@ import type { VariantId } from "../src/types.ts";
 const VARIANTS: VariantId[] = ["broken", "fixed", "control"];
 
 test.describe("gallery", () => {
+  test("selecting a case keeps keyboard focus on its navigation button", async ({ page }) => {
+    await page.goto("./");
+    const nextCase = page.getByRole("button", { name: cases[1].title });
+    await nextCase.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(nextCase).toBeFocused();
+    await expect(nextCase).toHaveAttribute("aria-current", "true");
+    await expect(page.getByRole("heading", { level: 2, name: cases[1].title })).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: cases[2].title })).toBeFocused();
+  });
+
   test("keyboard can move across variants and the iframe keeps the fixture path", async ({
     page,
   }) => {
