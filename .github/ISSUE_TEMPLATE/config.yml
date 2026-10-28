@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How to add a case
+    url: https://github.com/EstebanIndiveri/ui-break-cases/blob/main/docs/adding-a-case.md
+    about: Guide for adding a broken, fixed, and control fixture with a Playwright test.

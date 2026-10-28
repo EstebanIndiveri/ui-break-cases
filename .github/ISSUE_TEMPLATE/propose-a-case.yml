@@ -1,0 +1,42 @@
+name: Propose a case
+description: Suggest a reproducible UI bug for a future version.
+title: "[case] "
+labels: ["case-proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! A good case is small, reproducible in plain HTML/CSS, and has a fix that keeps the content and the control usable.
+  - type: input
+    id: symptom
+    attributes:
+      label: Symptom in one line
+      placeholder: "Long German label pushes the Save button off a toolbar at 360px"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: Viewport, browser, and the smallest HTML/CSS that shows it (a CodePen/StackBlitz link is fine).
+    validations:
+      required: true
+  - type: textarea
+    id: fix
+    attributes:
+      label: Known fix (if any)
+  - type: textarea
+    id: control
+    attributes:
+      label: A similar layout that is valid by design (control)
+      description: Optional. Helps us avoid "fixing" intended behavior.
+  - type: textarea
+    id: where
+    attributes:
+      label: Where did you see it?
+      description: Product type, framework, or a public link/issue. No private screenshots, please.
+  - type: dropdown
+    id: help
+    attributes:
+      label: Would you open a PR for it?
+      options: ["Yes", "Maybe, with guidance", "No"]

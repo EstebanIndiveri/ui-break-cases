@@ -135,7 +135,7 @@ That writes `dist/` with asset URLs under `/ui-break-cases/`. Upload the content
 
 ## Contribute
 
-See [docs/adding-a-case.md](docs/adding-a-case.md). Open a pull request against `main`. Keep the scope small: one case, three variants, one test file, a gallery entry.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/adding-a-case.md](docs/adding-a-case.md). Propose a case with the [Propose a case](https://github.com/EstebanIndiveri/ui-break-cases/issues/new?template=propose-a-case.yml) issue form. Open a pull request against `main`. Keep the scope small: one case, three variants, one test file, a gallery entry.
 
 ## Related reading
 
