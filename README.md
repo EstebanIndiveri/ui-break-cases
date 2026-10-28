@@ -1,16 +1,21 @@
-# ui-break-cases
+# ui-break-cases — reproducible CSS layout bugs, explained fixes, and Playwright tests
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Playwright](https://img.shields.io/badge/tested%20with-Playwright-2EAD33)](https://playwright.dev)
 [![Chromium only](https://img.shields.io/badge/browser-Chromium%20only-4285F4)](https://www.chromium.org/Home)
+[![3 cases](https://img.shields.io/badge/cases-3-0e8a16)](#cases)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6)](https://www.typescriptlang.org/)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 Reproducible UI bugs, explained fixes, and tests you can reuse.
 
-This repository is a small, local collection of interface failures. Each case ships with a broken fixture, a fix that keeps the content and the control, a valid-by-design control, and a Playwright test that asserts the defect or its absence.
+A small collection of real-world CSS layout failures — a long URL overflowing a flex row (`min-width: auto`), text clipped by a fixed-height container (`overflow: hidden`), and a fixed footer covering the last button on short mobile screens. Each case ships a **broken** page, a **fixed** page that keeps the content and the action, a **control** page that looks similar but is valid by design, and a **Playwright test** you can copy and point at your own component.
 
 It is for people who write UI tests or CSS and want a concrete example to copy. It is not a scanner, a benchmark, or a claim that these are the only bugs that matter.
 
 ![Side-by-side comparison of the three fixtures. Left column broken, right column fixed, with capture-only red outlines: a long URL overflowing a flex card while Copy stays on screen; a status sentence clipped to one line; Confirm booking covered by a fixed footer.](docs/media/broken-vs-fixed.gif)
+
+## Quickstart
 
 ```bash
 npm ci
@@ -69,13 +74,17 @@ npm test
 
 ## Cases
 
-| Case | Broken | Fixed | Control |
-| --- | --- | --- | --- |
-| `flex-long-text` (390×640) | An unbreakable URL overflows a flex row and pushes **Copy** out of the card. | `min-width: 0` and `overflow-wrap: anywhere` keep the same URL and the action inside the card. | A code block uses local `overflow-x: auto`. The page does not grow sideways. |
-| `fixed-height-label` (390×640) | A one-line height plus `overflow: hidden` clips a multi-line status sentence. | Height follows the text. The next block stays below it. | Intentional truncation with **Show full summary**. The expanded state is tested. A `title` attribute is not the recovery path. |
-| `fixed-footer-overlap` (360×500) | After scrolling to the end, a `position: fixed` footer covers **Confirm booking**. | `padding-bottom` reserves the footer height. | The same fixed bar with a matching spacer, which is valid. |
+| Case | Broken | Fixed | Control | Fixture / Test |
+| --- | --- | --- | --- | --- |
+| Long URL overflows a flex row (`flex-long-text`, 390×640) | An unbreakable URL overflows a flex row and pushes **Copy** out of the card. | `min-width: 0` and `overflow-wrap: anywhere` keep the same URL and the action inside the card. | A code block uses local `overflow-x: auto`. The page does not grow sideways. | [fixtures](public/fixtures/flex-long-text/) · [test](tests/flex-long-text.spec.ts) |
+| Text clipped by a fixed-height container (`fixed-height-label`, 390×640) | A one-line height plus `overflow: hidden` clips a multi-line status sentence. | Height follows the text. The next block stays below it. | Intentional truncation with **Show full summary**. The expanded state is tested. A `title` attribute is not the recovery path. | [fixtures](public/fixtures/fixed-height-label/) · [test](tests/fixed-height-label.spec.ts) |
+| Fixed footer covers the last button (`fixed-footer-overlap`, 360×500) | After scrolling to the end, a `position: fixed` footer covers **Confirm booking**. | `padding-bottom` reserves the footer height. | The same fixed bar with a matching spacer, which is valid. | [fixtures](public/fixtures/fixed-footer-overlap/) · [test](tests/fixed-footer-overlap.spec.ts) |
 
 Each case lives in `public/fixtures/<id>/{broken,fixed,control}.html`, is listed in `src/cases.ts`, and is covered by `tests/<id>.spec.ts`.
+
+## Propose a case
+
+Have a layout bug that belongs here? Open a [Propose a case](https://github.com/EstebanIndiveri/ui-break-cases/issues/new?template=propose-a-case.yml) issue. A good case is small, reproducible in plain HTML/CSS, and has a fix that keeps the content and the control usable.
 
 ## Adapt a test to another component
 
@@ -135,12 +144,14 @@ That writes `dist/` with asset URLs under `/ui-break-cases/`. Upload the content
 
 ## Contribute
 
-See [docs/adding-a-case.md](docs/adding-a-case.md). Open a pull request against `main`. Keep the scope small: one case, three variants, one test file, a gallery entry.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/adding-a-case.md](docs/adding-a-case.md). Propose a case with the [Propose a case](https://github.com/EstebanIndiveri/ui-break-cases/issues/new?template=propose-a-case.yml) issue form. Open a pull request against `main`. Keep the scope small: one case, three variants, one test file, a gallery entry.
 
 ## Related reading
 
 These projects are useful neighbors. ui-break-cases does not replace them.
 
+- [Flexbugs](https://github.com/philipwalton/flexbugs)
+- [Pesticide](https://github.com/mrmrs/pesticide)
 - [CSS Flexible Box Layout: automatic minimum size](https://www.w3.org/TR/css-flexbox-1/#min-size-auto)
 - [Defensive CSS](https://defensivecss.dev)
 - [MDN: overflow-wrap](https://developer.mozilla.org/en-US/docs/Web/CSS/overflow-wrap)
