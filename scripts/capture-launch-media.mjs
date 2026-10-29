@@ -54,7 +54,7 @@ const CASES = [
     id: "fixed-footer-overlap",
     viewport: { width: 360, height: 500 },
     clip: { x: 0, y: 220, width: 360, height: 280 },
-    outline: "#last-action",
+    outline: "#site-footer",
     scrollToEnd: true,
     fixedCaption: "padding-bottom reserves the footer",
   },
@@ -363,7 +363,10 @@ async function writeTerminalFrame(page, tmp, name, transcript, fonts, size) {
   return dest;
 }
 
-function extractIndentedBlock(text, startRe) {
+/** Max lines in an excerpt, including the start line. hitTestCenter is 19. */
+const EXCERPT_MAX_LINES = 24;
+
+function extractIndentedBlock(text, startRe, maxLines = EXCERPT_MAX_LINES) {
   const lines = text.split("\n");
   const start = lines.findIndex((line) => startRe.test(line));
   if (start < 0) {
@@ -374,10 +377,40 @@ function extractIndentedBlock(text, startRe) {
     `${indent}}`,
     `${indent}});`,
     `${indent}})`,
+    `${indent}},`,
   ]);
-  for (let i = start + 1; i < lines.length; i += 1) {
-    if (closers.has(lines[i])) {
-      return lines.slice(start, i + 1).join("\n");
+  const out = [lines[start]];
+  for (let i = start + 1; i < lines.length && out.length < maxLines; i += 1) {
+    const line = lines[i];
+    if (
+      i > start &&
+      indent === "" &&
+      /^(export\s+)?(async\s+)?function\b/.test(line)
+    ) {
+      return "";
+    }
+    out.push(line);
+    if (closers.has(line)) {
+      return out.join("\n");
+    }
+  }
+  return "";
+}
+
+function dedentBlock(block) {
+  const lines = block.split("\n");
+  const indents = lines
+    .filter((line) => line.trim().length > 0)
+    .map((line) => line.match(/^(\s*)/)[1].length);
+  const shift = indents.length > 0 ? Math.min(...indents) : 0;
+  return lines.map((line) => line.slice(shift)).join("\n");
+}
+
+function finalReturnLine(block) {
+  const lines = block.split("\n");
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    if (/^\s*return\b/.test(lines[i])) {
+      return lines[i].trim();
     }
   }
   return "";
@@ -426,14 +459,70 @@ async function specExcerpts() {
       "hitTestCenter excerpt is empty (searched tests/helpers.ts and skill/lib/geometry.ts)",
     );
   }
-  if (!/return\s*\{/.test(helperBody)) {
-    throw new Error("hitTestCenter excerpt is missing its return");
+  const lastReturn = finalReturnLine(helperBody);
+  if (!/^return\s*\{\s*x,\s*y,\s*hit,\s*target\s*\}\s*;?\s*$/.test(lastReturn)) {
+    throw new Error(
+      `hitTestCenter excerpt is missing its final return (last return was: ${lastReturn || "(none)"})`,
+    );
   }
 
   return {
-    left: { title: `${specRel} (excerpt)`, body: testBody },
-    right: { title: `${helperRel} (excerpt)`, body: helperBody },
+    left: { title: `${specRel} (excerpt)`, body: dedentBlock(testBody) },
+    right: { title: `${helperRel} (excerpt)`, body: dedentBlock(helperBody) },
   };
+}
+
+async function assertSpecPanesDoNotWrap(page) {
+  const panes = await page.evaluate(() => {
+    return [...document.querySelectorAll("pre")].map((pre, index) => {
+      const text = pre.textContent ?? "";
+      const lines = text.split("\n");
+      const cs = getComputedStyle(pre);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("canvas 2d unavailable");
+      }
+      ctx.font = cs.font;
+      const overflowing = [];
+      for (const line of lines) {
+        const width = ctx.measureText(line).width;
+        if (width > pre.clientWidth + 0.5) {
+          overflowing.push({ line, width });
+        }
+      }
+      return {
+        index,
+        scrollWidth: pre.scrollWidth,
+        clientWidth: pre.clientWidth,
+        scrollHeight: pre.scrollHeight,
+        clientHeight: pre.clientHeight,
+        overflowing,
+        longest: Math.max(0, ...lines.map((line) => line.length)),
+      };
+    });
+  });
+  if (panes.length === 0) {
+    throw new Error("spec-hit-test.png has no <pre> panes to measure");
+  }
+  for (const pane of panes) {
+    if (pane.overflowing.length > 0) {
+      const first = pane.overflowing[0];
+      throw new Error(
+        `spec-hit-test pane ${pane.index} line overflows (${first.width.toFixed(1)}px > ${pane.clientWidth}px): ${first.line}`,
+      );
+    }
+    if (pane.scrollWidth > pane.clientWidth + 1) {
+      throw new Error(
+        `spec-hit-test pane ${pane.index} overflows horizontally (${pane.scrollWidth} > ${pane.clientWidth}; longest line ${pane.longest} chars)`,
+      );
+    }
+    if (pane.scrollHeight > pane.clientHeight + 1) {
+      throw new Error(
+        `spec-hit-test pane ${pane.index} overflows vertically (${pane.scrollHeight} > ${pane.clientHeight})`,
+      );
+    }
+  }
 }
 
 async function writeSpecPng(page, fonts) {
@@ -451,25 +540,35 @@ async function writeSpecPng(page, fonts) {
       @font-face { font-family: Mono; src: url("${pathToFileURL(fonts.mono).href}"); }
       @font-face { font-family: MonoB; src: url("${pathToFileURL(fonts.monoBold).href}"); font-weight: 700; }
       html, body { margin: 0; width: ${W}px; height: ${H}px; background: #111827; color: #e5e7eb; }
-      .row { display: flex; height: ${H}px; }
-      .pane {
-        flex: 1; min-width: 0; box-sizing: border-box;
-        padding: 16px 18px 14px; border-right: 1px solid #374151;
+      .col {
+        display: flex; flex-direction: column;
+        width: ${W}px; height: ${H}px;
       }
-      .pane:last-child { border-right: 0; }
+      .pane {
+        flex: 1 1 0; min-height: 0; min-width: 0;
+        box-sizing: border-box;
+        padding: 12px 20px 8px;
+        border-bottom: 1px solid #374151;
+        display: flex; flex-direction: column;
+      }
+      .pane:last-child { border-bottom: 0; flex: 1.4 1 0; }
       h2 {
-        margin: 0 0 10px; font: 700 16px/1.2 MonoB, ui-monospace, monospace;
+        margin: 0 0 6px; font: 700 14px/1.2 MonoB, ui-monospace, monospace;
         color: #93c5fd; letter-spacing: 0;
+        flex: 0 0 auto;
       }
       pre {
-        margin: 0; font: 13px/1.38 Mono, ui-monospace, monospace;
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
+        margin: 0;
+        flex: 1 1 auto;
+        min-height: 0;
+        font: 12px/1.28 Mono, ui-monospace, monospace;
+        white-space: pre;
+        overflow: hidden;
       }
     </style>
   </head>
   <body>
-    <div class="row">
+    <div class="col">
       <div class="pane">
         <h2>${esc(left.title)}</h2>
         <pre>${esc(left.body)}</pre>
@@ -483,7 +582,13 @@ async function writeSpecPng(page, fonts) {
 </html>`,
   );
   const dest = path.join(MEDIA, "spec-hit-test.png");
-  await screenshotHtml(page, html, dest, W, H);
+  await page.setViewportSize({ width: W, height: H });
+  await page.goto(pathToFileURL(html).href, { waitUntil: "load" });
+  await assertSpecPanesDoNotWrap(page);
+  await page.screenshot({
+    path: dest,
+    clip: { x: 0, y: 0, width: W, height: H },
+  });
   await rm(html, { force: true });
   return dest;
 }
@@ -562,17 +667,9 @@ const CASE_SPECS = [
   "fixed-height-label.spec.ts",
   "fixed-footer-overlap.spec.ts",
 ];
-const VARIANT_ORDER = ["broken", "fixed", "control"];
 
 function specIndex(line) {
   return CASE_SPECS.findIndex((spec) => line.includes(spec));
-}
-
-function variantIndex(line) {
-  const found = VARIANT_ORDER.findIndex((variant) =>
-    new RegExp(`\\b${variant}\\b`).test(line),
-  );
-  return found === -1 ? VARIANT_ORDER.length : found;
 }
 
 function trimPlaywrightOutput(stdout, stderr) {
@@ -592,15 +689,7 @@ function trimPlaywrightOutput(stdout, stderr) {
     .reverse()
     .find((line) => /\d+ passed/.test(line) && !line.includes("›"));
 
-  const tests = lines
-    .filter((line) => specIndex(line) >= 0)
-    .sort((a, b) => {
-      const spec = specIndex(a) - specIndex(b);
-      if (spec !== 0) {
-        return spec;
-      }
-      return variantIndex(a) - variantIndex(b);
-    });
+  const tests = lines.filter((line) => specIndex(line) >= 0);
 
   for (const spec of CASE_SPECS) {
     if (!tests.some((line) => line.includes(spec))) {
