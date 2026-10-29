@@ -37,7 +37,7 @@ Clone this repository, or copy `skill/` plus the loader your agent uses.
 
 Copy `.agents/skills/ui-break-cases/` and the `skill/` directory into the target project (or keep this repo as a sibling the agent can read). Cursor loads `.agents/skills/<name>/SKILL.md`.
 
-Do **not** also copy the skill into `.cursor/skills` or `.claude/skills` in the same project — Cursor would list it twice.
+Do **not** also copy the skill into `.cursor/skills` or `.claude/skills` in the same project — Cursor loads `.agents/skills`, `.cursor/skills`, and `.claude/skills`, so the skill would show up twice (or three times). If the project already has `.claude/skills`, skip that folder and use `.agents/skills` only.
 
 Optional: copy `.cursor/rules/ui-break-cases.mdc` if you want an on-demand rule in addition to the skill.
 
@@ -53,7 +53,7 @@ Paste `skill/install/codex-AGENTS.md` into the target project’s `AGENTS.md`, a
 
 1. Open the **page under review** directly (`TARGET.url`, not a gallery iframe).
 2. Confirm the symptom with geometry: `boundingBox` / `getBoundingClientRect`, `Range.getClientRects` for clipped text, `elementFromPoint` at a control’s center **before** clicking.
-3. Decide which case applies and whether the page resembles **broken**, **fixed**, or **control**. Control is measured (computed `overflow-x`, painted expand, spacer height), not inferred from a node existing in the DOM. If a control and a broken pattern both match, **control wins**.
+3. Decide which case applies and whether the page resembles **broken**, **fixed**, or **control**. Control is measured (computed `overflow-x`, painted expand, spacer height), not inferred from a node existing in the DOM. Run every case and report every match. Control wins over a false broken match **for the same case only** — a flex control does not hide a broken footer.
 4. Control or fixed → report **no bug**. Do not restyle a valid design.
 5. Broken → change CSS/markup to match that case’s `fixed` variant. Keep the original string and the control.
 6. Copy `skill/templates/<id>.spec.ts` and `skill/lib/geometry.ts`. Point `TARGET.url` at the user’s page. Use `GEOM_TOLERANCE_PX = 4` and `CLEAR_DEFECT_PX = 16`. Comment any other pixel value.
@@ -62,7 +62,7 @@ The generated test asserts healthy layout, so it **fails on broken** (via `expec
 
 ## What was verified here vs what depends on the agent
 
-A Cursor session against the nine fixtures is recorded in [`docs/agent-runs/`](agent-runs/README.md). Claude Code and Codex were **not** run.
+A Cursor session against the nine fixtures is recorded in [`docs/agent-runs/`](agent-runs/README.md). That run was not blind. A blind set, prompt, and scorer for a **fresh** agent live in [`docs/agent-runs/blind/`](agent-runs/blind/README.md). Claude Code and Codex were **not** run.
 
 Local verification is deterministic:
 

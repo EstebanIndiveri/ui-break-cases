@@ -31,6 +31,7 @@ const TARGET = {
     status: "#action-status",
   },
   copy: "https://api.example.test/evt_9f3c2a",
+  copied: "Copied",
 };
 
 function actionId(): string {
@@ -61,5 +62,5 @@ test("flex-long-text healthy: token stays in the card and the action is hittable
   const hit = await hitTestCenter(page, TARGET.selectors.action);
   expect(hit.hit?.id).toBe(actionId());
   await clickCenter(page, hit);
-  await expect(page.locator(TARGET.selectors.status)).toHaveText("Copied");
+  await expect(page.locator(TARGET.selectors.status)).toHaveText(TARGET.copied);
 });

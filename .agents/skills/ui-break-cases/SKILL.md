@@ -9,17 +9,17 @@ You review a page for **only** the three patterns in this package. You are not a
 
 Chromium only. Output must be reviewed by a human before it is merged.
 
-This file is the source of truth. Identical copies live at `.agents/skills/ui-break-cases/SKILL.md` (Cursor and Codex) and `skill/install/claude.SKILL.md` (paste into `.claude/skills/ui-break-cases/SKILL.md` for Claude Code). Do not keep a second skill under `.cursor/skills` or `.claude/skills` in this repo — Cursor would load it twice.
+This file is the source of truth. Identical copies live at `.agents/skills/ui-break-cases/SKILL.md` (Cursor and Codex) and `skill/install/claude.SKILL.md` (paste into `.claude/skills/ui-break-cases/SKILL.md` for Claude Code). Do not keep a second skill under `.cursor/skills` or `.claude/skills` in this repo — Cursor would load it twice. If a **target** project already has `.claude/skills/ui-break-cases/`, Cursor also loads that directory, so copying the skill there **and** into `.agents/skills` would list it twice. Use one loader per project.
 
 ## Workflow
 
 1. Identify the target URL, the viewport, and the relevant selectors.
 2. Read the matching file in `skill/cases/` if it is available.
 3. Confirm the symptom with geometry. Do not trust a screenshot alone. Do not click a control until after `elementFromPoint` (a locator click can `scrollIntoView` and hide the bug).
-4. Classify what the target **resembles**: `broken`, `fixed`, or `control`.
-5. If it resembles **control**, report **no bug** and stop. Do not “fix” a valid design.
-6. If it resembles **fixed**, report **no bug** (already healthy). Do not restyle it.
-7. If it resembles **broken**, propose a fix equivalent to that case’s `fixed` variant: keep the original copy and keep the control usable. Do not delete content, truncate with an ellipsis, shrink the font until it is unreadable, or use `title` as the recovery path.
+4. Classify **every** matching case independently (`broken`, `fixed`, or `control`). A page may match more than one case. Control wins over a false broken match **for the same case only** — do not stop after the first control.
+5. If a match resembles **control**, report **no bug** for that case. Do not “fix” a valid design. Continue with the other cases.
+6. If a match resembles **fixed**, report **no bug** for that case (already healthy). Do not restyle it.
+7. If a match resembles **broken**, propose a fix equivalent to that case’s `fixed` variant: keep the original copy and keep the control usable. Do not delete content, truncate with an ellipsis, shrink the font until it is unreadable, or use `title` as the recovery path.
 8. Emit a Playwright test by copying `skill/templates/<id>.spec.ts` and `skill/lib/geometry.ts`. Point `TARGET.url` at the page under review (`page.goto(TARGET.url)`). That test must **fail on the broken page and pass on the fixed page** via an `expect` assertion, not a crash.
 
 ## Tolerances
@@ -50,7 +50,7 @@ Copy helpers from `skill/lib/geometry.ts`. They are for these patterns, not prod
 
 ## Classification rules
 
-Run every case that could apply. The first matching **control** wins over a false broken match.
+Run every case that could apply and **report every match**. Control wins over a false broken match **for the same case only**. A flex-row control (local code-block scroll) does not hide a broken footer on the same page.
 
 A control is geometry, not structure:
 

@@ -9,3 +9,5 @@ Issue #2 asks for a real coding-agent run against the fixtures, not only the mec
 | Codex | No | Not executed in this repo |
 
 Install outside this repository is recorded in [temp-project.md](temp-project.md).
+
+A **blind** re-run (neutral filenames, no banners, mapping kept outside the set) is prepared in [blind/](blind/README.md). Do not have the skill-authoring agent take that run.

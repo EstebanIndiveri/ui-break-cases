@@ -23,9 +23,12 @@ import {
  * A coding agent is expected to reach the same classification by following
  * skill/SKILL.md; this module does not call an LLM.
  *
- * Control wins over a false broken match (same as skill/SKILL.md).
+ * Control wins over a false broken match for the SAME case only.
+ * A flex control on the page does not hide a broken footer.
  * Broken is returned only when the defect exceeds CLEAR_DEFECT_PX.
  * The 4–16px band is unclassified (null), not a fallback "broken".
+ * Every matching case is reported; callers must not drop a bug because
+ * another case resembled control.
  */
 
 export type Resembles = "broken" | "fixed" | "control";
@@ -45,6 +48,7 @@ export async function count(page: Page, selector: string): Promise<number> {
 export async function classifyFlexLongText(
   page: Page,
   threshold = CLEAR_DEFECT_PX,
+  tolerance = GEOM_TOLERANCE_PX,
 ): Promise<Classification | null> {
   const codeBlocks = await count(page, "#code-block");
   const cards = await count(page, "#card");
@@ -59,7 +63,7 @@ export async function classifyFlexLongText(
     const metrics = await scrollMetrics(page, "#code-block");
     const localScroll =
       metrics.scrollWidth > metrics.clientWidth + CLEAR_DEFECT_PX;
-    const pageContained = pageOverflow <= GEOM_TOLERANCE_PX;
+    const pageContained = pageOverflow <= tolerance;
     if (
       overflowXAllowsScroll(overflowX) &&
       localScroll &&
@@ -104,8 +108,8 @@ export async function classifyFlexLongText(
 
   const hit = await hitTestCenter(page, "#action");
   if (
-    overflow <= GEOM_TOLERANCE_PX &&
-    action.right <= card.right + GEOM_TOLERANCE_PX &&
+    overflow <= tolerance &&
+    action.right <= card.right + tolerance &&
     hit.hit?.id === "action"
   ) {
     return {
@@ -253,31 +257,51 @@ export async function classifyFixedFooterOverlap(
   return null;
 }
 
+export type FixtureReport = {
+  matches: Classification[];
+};
+
+export function matchFor(
+  report: FixtureReport,
+  caseId: Classification["caseId"],
+): Classification | undefined {
+  return report.matches.find((item) => item.caseId === caseId);
+}
+
+export function reportHasBug(report: FixtureReport): boolean {
+  return report.matches.some((item) => item.bug);
+}
+
+/**
+ * Classify the page that is already open. Does not navigate.
+ * Control of case A cannot hide a broken match of case B.
+ */
+export async function classifyOpenPage(page: Page): Promise<FixtureReport> {
+  const matches: Classification[] = [];
+  const flex = await classifyFlexLongText(page);
+  if (flex) {
+    matches.push(flex);
+  }
+  const label = await classifyFixedHeightLabel(page);
+  if (label) {
+    matches.push(label);
+  }
+  const footer = await classifyFixedFooterOverlap(page);
+  if (footer) {
+    matches.push(footer);
+  }
+  return { matches };
+}
+
 export async function classifyFixture(
   page: Page,
   fixturePath: string,
   viewport: { width: number; height: number },
-): Promise<Classification> {
+): Promise<FixtureReport> {
   await openPage(page, fixturePath, viewport);
-  const matches = (
-    await Promise.all([
-      classifyFlexLongText(page),
-      classifyFixedHeightLabel(page),
-      classifyFixedFooterOverlap(page),
-    ])
-  ).filter((item): item is Classification => item !== null);
-
-  const control = matches.find((item) => item.resembles === "control");
-  if (control) {
-    return control;
+  const report = await classifyOpenPage(page);
+  if (report.matches.length === 0) {
+    throw new Error(`No ui-break-cases pattern matched ${fixturePath}`);
   }
-  const bug = matches.find((item) => item.bug);
-  if (bug) {
-    return bug;
-  }
-  const fixed = matches.find((item) => item.resembles === "fixed");
-  if (fixed) {
-    return fixed;
-  }
-  throw new Error(`No ui-break-cases pattern matched ${fixturePath}`);
+  return report;
 }

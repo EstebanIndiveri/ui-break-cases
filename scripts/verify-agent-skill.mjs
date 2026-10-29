@@ -129,7 +129,14 @@ function parseListResults(output) {
 }
 
 function expectAssertionFailed(output) {
-  return /Error:\s*expect\(/.test(output) || /expect\(received\)/.test(output);
+  if (
+    /Timed out \d+ms/i.test(output) ||
+    /Timeout \d+ms/i.test(output) ||
+    /element\(s\) not found/i.test(output)
+  ) {
+    return false;
+  }
+  return /Error:\s*expect\(received\)/.test(output);
 }
 
 async function copies() {

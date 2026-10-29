@@ -37,6 +37,7 @@ const TARGET = {
     status: "#action-status",
   },
   copy: "Confirm booking",
+  confirmed: "Booking confirmed",
 };
 
 function actionId(): string {
@@ -71,6 +72,6 @@ test("fixed-footer-overlap healthy: last action stays above the footer and is hi
   expect(hit.hit?.id).toBe(actionId());
   await clickCenter(page, hit);
   await expect(page.locator(TARGET.selectors.status)).toHaveText(
-    "Booking confirmed",
+    TARGET.confirmed,
   );
 });

@@ -25,7 +25,8 @@ Review this page for the three ui-break-cases layout bugs.
 Follow skill/SKILL.md and skill/cases/.
 Open TARGET.url directly. Confirm with geometry (bounding boxes,
 Range.getClientRects, elementFromPoint before any click).
-Classify broken / fixed / control. Control wins over a false broken match.
+Classify broken / fixed / control. Report every matching case.
+Control wins over a false broken match for the same case only.
 If broken: propose a fix equivalent to that case's fixed variant
 (keep the original copy; keep the control usable) and emit a Playwright
 test from skill/templates that fails on broken via expect() and passes
@@ -52,7 +53,7 @@ That is the template with `TARGET.url` set. The template already uses `openPage`
 
 - **URL:** `http://127.0.0.1:4173/fixtures/flex-long-text/broken.html`
 - **Case flagged:** `flex-long-text`, resembles **broken**, bug=yes
-- **Geometry:** card right 268px; token right 306.0px; action right 385.0px; overflow 117.0px (> 16). Action still inside the 390px viewport. Token string still `https://api.example.test/evt_9f3c2a`.
+- **Geometry:** card right 268px; token right 306.015625px; action right 385.03125px; overflow 117.03125px (> 16). Action still inside the 390px viewport. Token string still `https://api.example.test/evt_9f3c2a`.
 - **Fix (equivalent to fixed.html):**
 
 ```diff
