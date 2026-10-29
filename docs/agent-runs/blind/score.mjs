@@ -5,9 +5,11 @@
  *
  * A page fails if:
  *   - the expected case is missing or misclassified
+ *   - two matches for the same case disagree (resembles or bug)
  *   - another case is reported as a bug (false positive)
- *   - a broken page has no fix, or no spec output that fails via expect(received)
- *     (timeouts / "Rejected to value" do not count)
+ *   - a broken page has no fix, or no captured specOutput that fails via
+ *     expect(received) (timeouts / "Rejected to value" do not count;
+ *     specFailedViaExpect is ignored)
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -66,16 +68,30 @@ for (const file of files) {
   const want = mapping[file];
   const got = results[file];
   const matches = Array.isArray(got?.matches) ? got.matches : [];
-  const hit = matches.find((item) => item.caseId === want.caseId);
+  const hits = matches.filter((item) => item.caseId === want.caseId);
   const extras = matches.filter((item) => item.caseId !== want.caseId);
   const falsePositive = extras.some((item) => item.bug === true);
-  const resembles = hit?.resembles;
-  const bug = hit?.bug;
   const reasons = [];
 
-  if (!hit) {
+  if (hits.length === 0) {
     reasons.push("missing expected case");
   }
+  if (hits.length > 1) {
+    const resembles = new Set(hits.map((item) => item.resembles));
+    const bugs = new Set(hits.map((item) => Boolean(item.bug)));
+    if (resembles.size > 1 || bugs.size > 1) {
+      reasons.push(
+        `contradictory matches for ${want.caseId}: ${hits
+          .map((item) => `${item.resembles} bug=${item.bug}`)
+          .join("; ")}`,
+      );
+    }
+  }
+
+  const hit = hits[0];
+  const resembles = hit?.resembles;
+  const bug = hit?.bug;
+
   if (hit && resembles !== want.resembles) {
     reasons.push(`resembles ${resembles} wanted ${want.resembles}`);
   }
@@ -100,8 +116,8 @@ for (const file of files) {
     const specOutput = String(
       hit?.specOutput ?? got?.specOutput ?? hit?.spec ?? "",
     );
-    const specOk =
-      hit?.specFailedViaExpect === true || expectAssertionFailed(specOutput);
+    // Self-reported specFailedViaExpect is not evidence.
+    const specOk = expectAssertionFailed(specOutput);
     if (!hasFix) {
       reasons.push("broken page missing fix");
     }

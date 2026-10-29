@@ -231,6 +231,17 @@ async function detection() {
       ? "isClearFlexOverflow(…, 99999) is false on the broken fixture"
       : "threshold mutant test missing or failed",
   });
+
+  record({
+    caseId: "agent-skill.spec",
+    variant: "n/a",
+    check: "suite",
+    ok: result.code === 0,
+    detail:
+      result.code === 0
+        ? "tests/agent-skill.spec.ts passed"
+        : "tests/agent-skill.spec.ts failed (mutants or detection)",
+  });
 }
 
 async function templates() {
@@ -270,28 +281,30 @@ async function templates() {
 async function timeoutRegression() {
   console.log("\n# empty.html missing selector is not FAIL via expect()\n");
   const emptyUrl = pathToFileURL(path.join(ROOT, "tests", "empty.html")).href;
-  const spec = path.join("skill/templates", "flex-long-text.spec.ts");
-  const result = await run(
-    ["-c", "playwright.skill.config.ts", spec, "--reporter=list", "--timeout=8000"],
-    { UI_BREAK_TARGET_URL: emptyUrl },
-  );
-  printOutput("empty.html timeout", result);
-  const output = `${result.stdout}\n${result.stderr}`;
-  const expectFail = expectAssertionFailed(output);
-  const timedOut =
-    /Test timeout of \d+ms/i.test(output) || /Rejected to value/i.test(output);
-  const ok = result.code !== 0 && !expectFail && timedOut;
-  record({
-    caseId: "empty.html",
-    variant: "n/a",
-    check: "timeout-not-expect",
-    ok,
-    detail: expectFail
-      ? "timeout was counted as FAIL via expect() (bad)"
-      : ok
-        ? "timeout / rejected locator is not FAIL via expect()"
-        : "empty.html did not time out as expected",
-  });
+  for (const item of CASES) {
+    const spec = path.join("skill/templates", `${item.id}.spec.ts`);
+    const result = await run(
+      ["-c", "playwright.skill.config.ts", spec, "--reporter=list", "--timeout=8000"],
+      { UI_BREAK_TARGET_URL: emptyUrl },
+    );
+    printOutput(`empty.html ${item.id}`, result);
+    const output = `${result.stdout}\n${result.stderr}`;
+    const expectFail = expectAssertionFailed(output);
+    const timedOut =
+      /Test timeout of \d+ms/i.test(output) || /Rejected to value/i.test(output);
+    const ok = result.code !== 0 && !expectFail && timedOut;
+    record({
+      caseId: "empty.html",
+      variant: item.id,
+      check: "timeout-not-expect",
+      ok,
+      detail: expectFail
+        ? "timeout was counted as FAIL via expect() (bad)"
+        : ok
+          ? "timeout / rejected locator is not FAIL via expect()"
+          : "empty.html did not time out as expected",
+    });
+  }
 }
 
 async function main() {

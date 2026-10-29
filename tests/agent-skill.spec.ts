@@ -6,12 +6,15 @@ import {
   boundingRect,
   computedOverflowX,
   documentHorizontalOverflow,
+  hitTestCenter,
   horizontalOverflow,
   isClearFlexOverflow,
   isPainted,
   openFixture,
   overflowXAllowsScroll,
+  overlapHeight,
   scrollMetrics,
+  scrollToDocumentEnd,
 } from "./helpers.ts";
 import {
   classifyFixedFooterOverlap,
@@ -145,7 +148,7 @@ test.describe("agent-skill mutations", () => {
     expect(classified?.resembles).not.toBe("control");
   });
 
-  test("label control with display:none expand is not control", async ({
+  test("N3 label expandPainted dies: display:none expand is not control", async ({
     page,
   }) => {
     const spec = getCase("fixed-height-label");
@@ -481,6 +484,164 @@ test.describe("agent-skill surviving mutants", () => {
       const full = el.scrollHeight;
       el.style.height = `${Math.max(8, full - 8)}px`;
     });
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).not.toBe("broken");
+    expect(classified?.bug ?? false).toBe(false);
+  });
+
+  test("N7 footer 4-16px band dies: 10px overlap with hit on footer is not broken", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-footer-overlap");
+    if (!spec) {
+      throw new Error("fixed-footer-overlap missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    await page.evaluate(() => {
+      const main = document.querySelector("main");
+      const action = document.getElementById("last-action");
+      if (!(main instanceof HTMLElement) || !(action instanceof HTMLElement)) {
+        return;
+      }
+      main.style.paddingBottom = "62px";
+      action.style.minHeight = "16px";
+      action.style.height = "16px";
+      action.style.padding = "0";
+    });
+    await scrollToDocumentEnd(page);
+    const action = await boundingRect(page, "#last-action");
+    const footer = await boundingRect(page, "#site-footer");
+    const overlap = overlapHeight(action, footer);
+    const hit = await hitTestCenter(page, "#last-action");
+    expect(overlap).toBeGreaterThan(GEOM_TOLERANCE_PX);
+    expect(overlap).toBeLessThanOrEqual(CLEAR_DEFECT_PX);
+    expect(hit.hit?.id).toBe("site-footer");
+    const classified = await classifyFixedFooterOverlap(page);
+    expect(classified?.resembles).not.toBe("broken");
+    expect(classified?.bug ?? false).toBe(false);
+  });
+
+  test("N22 footer 4-16px band dies: 10px overlap with hittable action is not fixed", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-footer-overlap");
+    if (!spec) {
+      throw new Error("fixed-footer-overlap missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    await page.evaluate(() => {
+      const main = document.querySelector("main");
+      if (!(main instanceof HTMLElement)) {
+        return;
+      }
+      main.style.paddingBottom = "62px";
+    });
+    await scrollToDocumentEnd(page);
+    const action = await boundingRect(page, "#last-action");
+    const footer = await boundingRect(page, "#site-footer");
+    const overlap = overlapHeight(action, footer);
+    const hit = await hitTestCenter(page, "#last-action");
+    expect(overlap).toBeGreaterThan(GEOM_TOLERANCE_PX);
+    expect(overlap).toBeLessThanOrEqual(CLEAR_DEFECT_PX);
+    expect(hit.hit?.id).toBe("last-action");
+    const classified = await classifyFixedFooterOverlap(page);
+    expect(classified?.resembles).not.toBe("fixed");
+    expect(classified?.resembles).not.toBe("control");
+    expect(classified?.bug ?? false).toBe(false);
+  });
+
+  test("N5 footer clear without hit-test dies: overlay on a reserved-space action is not fixed", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-footer-overlap");
+    if (!spec) {
+      throw new Error("fixed-footer-overlap missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    await scrollToDocumentEnd(page);
+    await page.evaluate(() => {
+      const action = document.getElementById("last-action");
+      if (!(action instanceof HTMLElement)) {
+        return;
+      }
+      const rect = action.getBoundingClientRect();
+      const overlay = document.createElement("div");
+      overlay.style.cssText = [
+        "position:fixed",
+        `left:${rect.left}px`,
+        `top:${rect.top}px`,
+        `width:${rect.width}px`,
+        `height:${rect.height}px`,
+        "background:#000",
+        "z-index:2147483646",
+      ].join(";");
+      document.documentElement.append(overlay);
+    });
+    const classified = await classifyFixedFooterOverlap(page);
+    expect(classified?.resembles).not.toBe("fixed");
+    expect(classified?.resembles).not.toBe("control");
+  });
+
+  test("N18 footer clear without bottom check dies: action below a top-fixed bar is not fixed", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-footer-overlap");
+    if (!spec) {
+      throw new Error("fixed-footer-overlap missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    await page.evaluate(() => {
+      const footer = document.getElementById("site-footer");
+      if (!(footer instanceof HTMLElement)) {
+        return;
+      }
+      footer.style.bottom = "auto";
+      footer.style.top = "0";
+    });
+    await scrollToDocumentEnd(page);
+    const action = await boundingRect(page, "#last-action");
+    const footer = await boundingRect(page, "#site-footer");
+    const overlap = overlapHeight(action, footer);
+    const hit = await hitTestCenter(page, "#last-action");
+    expect(overlap).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);
+    expect(action.bottom).toBeGreaterThan(footer.top + GEOM_TOLERANCE_PX);
+    expect(hit.hit?.id).toBe("last-action");
+    const classified = await classifyFixedFooterOverlap(page);
+    expect(classified?.resembles).not.toBe("fixed");
+    expect(classified?.resembles).not.toBe("control");
+  });
+
+  test("N4 label hidden check dies: painted expand without clip is not control", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.control.path, spec.viewport);
+    await page.locator("#label").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.classList.remove("is-collapsed");
+      el.style.height = "auto";
+      el.style.overflow = "visible";
+    });
+    expect(await isPainted(page, "#expand-toggle")).toBe(true);
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).not.toBe("control");
+  });
+
+  test("N12 label expandPainted dies: clipped label with painted expand is not broken", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.control.path, spec.viewport);
+    await page.locator("#expand-toggle").evaluate((node) => {
+      node.removeAttribute("aria-expanded");
+    });
+    expect(await isPainted(page, "#expand-toggle")).toBe(true);
     const classified = await classifyFixedHeightLabel(page);
     expect(classified?.resembles).not.toBe("broken");
     expect(classified?.bug ?? false).toBe(false);
