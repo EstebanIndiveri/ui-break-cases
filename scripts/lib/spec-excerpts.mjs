@@ -133,28 +133,25 @@ export function extractBrokenTest(specText, specRel = "spec") {
   return { title, assertionBlock };
 }
 
+export const SKILL_GEOMETRY_REL = "skill/lib/geometry.ts";
+
 export function extractHitTestCenter(text, { label = "hitTestCenter" } = {}) {
   return extractIndentedBlock(text, /function hitTestCenter\b/, { label });
 }
 
 export function specExcerptsFromTexts({ specRel, specText, helpers }) {
   const { title, assertionBlock } = extractBrokenTest(specText, specRel);
-  let helperRel = "";
-  let helperBody = "";
-  for (const { rel, text } of helpers) {
-    if (text == null) {
-      continue;
-    }
-    const body = extractHitTestCenter(text);
-    if (body.trim().length > 0) {
-      helperRel = rel;
-      helperBody = body;
-      break;
-    }
+  const geometry = helpers.find((item) => item.rel === SKILL_GEOMETRY_REL);
+  if (!geometry || geometry.text == null) {
+    throw new Error(
+      `hitTestCenter excerpt is empty (searched ${SKILL_GEOMETRY_REL})`,
+    );
   }
+  const helperBody = extractHitTestCenter(geometry.text);
+  const helperRel = SKILL_GEOMETRY_REL;
   if (helperBody.trim().length === 0) {
     throw new Error(
-      "hitTestCenter excerpt is empty (searched tests/helpers.ts and skill/lib/geometry.ts)",
+      `hitTestCenter excerpt is empty (searched ${SKILL_GEOMETRY_REL})`,
     );
   }
   const lastReturn = finalReturnLine(helperBody);
