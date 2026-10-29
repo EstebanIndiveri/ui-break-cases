@@ -26,6 +26,7 @@ Write JSON to `results.json` with this shape:
         "resembles": "broken | fixed | control",
         "bug": true,
         "fix": "css or null",
+        "specOutput": "full captured Playwright stdout/stderr, or null",
         "notes": "short geometry notes"
       }
     ]
@@ -33,5 +34,7 @@ Write JSON to `results.json` with this shape:
 }
 ```
 
-Use `bug: true` only when `resembles` is `"broken"`.
+Use `bug: true` only when `resembles` is `"broken"`. Do not report two different `resembles` / `bug` values for the same `caseId` on one page.
+
+For a **broken** match, `specOutput` must be the captured Playwright output of the generated spec against that page. The scorer parses that string for `Error: expect(received)` and rejects timeouts, `Test timeout of Nms`, and `Rejected to value`. A boolean flag is not a substitute for the captured output.
 Write results.json at the repo root and commit it together with the generated specs on this branch.
