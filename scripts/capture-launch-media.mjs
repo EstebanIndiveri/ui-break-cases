@@ -22,6 +22,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
+import { paneFlex, specExcerptsFromTexts } from "./lib/spec-excerpts.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MEDIA = path.join(ROOT, "docs", "media");
@@ -398,145 +399,34 @@ async function writeTerminalFrame(page, tmp, name, transcript, fonts, size) {
   return dest;
 }
 
-/** Max lines in an excerpt, including the start line. hitTestCenter is 19. */
-const EXCERPT_MAX_LINES = 24;
-
-function extractIndentedBlock(
-  text,
-  startRe,
-  { maxLines = EXCERPT_MAX_LINES, label = "excerpt" } = {},
-) {
-  const lines = text.split("\n");
-  const start = lines.findIndex((line) => startRe.test(line));
-  if (start < 0) {
-    return "";
-  }
-  const indent = lines[start].match(/^(\s*)/)[1];
-  const closers = new Set([
-    `${indent}}`,
-    `${indent}});`,
-    `${indent}})`,
-    `${indent}},`,
-  ]);
-  const out = [lines[start]];
-  for (let i = start + 1; i < lines.length && out.length < maxLines; i += 1) {
-    const line = lines[i];
-    if (
-      i > start &&
-      indent === "" &&
-      /^(export\s+)?(async\s+)?function\b/.test(line)
-    ) {
-      throw new Error(`${label} excerpt is unterminated`);
-    }
-    out.push(line);
-    if (closers.has(line)) {
-      return out.join("\n");
-    }
-  }
-  if (out.length >= maxLines) {
-    throw new Error(`${label} excerpt exceeded cap`);
-  }
-  throw new Error(`${label} excerpt is unterminated`);
-}
-
-function dedentBlock(block) {
-  const lines = block.split("\n");
-  const indents = lines
-    .filter((line) => line.trim().length > 0)
-    .map((line) => line.match(/^(\s*)/)[1].length);
-  const shift = indents.length > 0 ? Math.min(...indents) : 0;
-  return lines.map((line) => line.slice(shift)).join("\n");
-}
-
-function finalReturnLine(block) {
-  const lines = block.split("\n");
-  for (let i = lines.length - 1; i >= 0; i -= 1) {
-    if (/^\s*return\b/.test(lines[i])) {
-      return lines[i].trim();
-    }
-  }
-  return "";
-}
-
 async function readSource(rel) {
   return readFile(path.join(ROOT, rel), "utf8");
 }
 
-function extractFromTo(text, startRe, endRe, { maxLines = EXCERPT_MAX_LINES, label = "excerpt" } = {}) {
-  const lines = text.split("\n");
-  const start = lines.findIndex((line) => startRe.test(line));
-  if (start < 0) {
-    return "";
-  }
-  const out = [lines[start]];
-  for (let i = start + 1; i < lines.length && out.length < maxLines; i += 1) {
-    out.push(lines[i]);
-    if (endRe.test(lines[i])) {
-      return out.join("\n");
-    }
-  }
-  if (out.length >= maxLines) {
-    throw new Error(`${label} excerpt exceeded cap`);
-  }
-  throw new Error(`${label} excerpt is unterminated`);
+function isMissingFile(error) {
+  return (
+    error &&
+    (error.code === "ENOENT" || error.code === "ERR_MODULE_NOT_FOUND")
+  );
 }
 
 async function specExcerpts() {
   const specRel = "tests/fixed-footer-overlap.spec.ts";
   const specText = await readSource(specRel);
-  // Assertion block only — the full test() title is too long to set at a
-  // social-readable size. This is still copied from the spec.
-  const testBody = extractFromTo(
-    specText,
-    /const \{ action, footer, hit, position \}/,
-    /expect\(hit\.hit\?\.id\)\.toBe\("site-footer"\)/,
-    { label: specRel },
-  );
-  if (testBody.trim().length === 0) {
-    throw new Error(
-      `spec excerpt empty: no broken-test assertions in ${specRel}`,
-    );
-  }
-  if (!testBody.includes("expect(")) {
-    throw new Error(
-      `spec excerpt for ${specRel} is missing an assertion`,
-    );
-  }
-
   const helperFiles = ["tests/helpers.ts", "skill/lib/geometry.ts"];
-  let helperRel = "";
-  let helperBody = "";
+  const helpers = [];
   for (const rel of helperFiles) {
     try {
-      const text = await readSource(rel);
-      const body = extractIndentedBlock(text, /function hitTestCenter\b/, {
-        label: "hitTestCenter",
-      });
-      if (body.trim().length > 0) {
-        helperRel = rel;
-        helperBody = body;
-        break;
+      helpers.push({ rel, text: await readSource(rel) });
+    } catch (error) {
+      if (isMissingFile(error)) {
+        helpers.push({ rel, text: null });
+        continue;
       }
-    } catch {
-      // File may not exist on this branch (skill/lib is v0.2).
+      throw error;
     }
   }
-  if (helperBody.trim().length === 0) {
-    throw new Error(
-      "hitTestCenter excerpt is empty (searched tests/helpers.ts and skill/lib/geometry.ts)",
-    );
-  }
-  const lastReturn = finalReturnLine(helperBody);
-  if (!/^return\s*\{\s*x,\s*y,\s*hit,\s*target\s*\}\s*;?\s*$/.test(lastReturn)) {
-    throw new Error(
-      `hitTestCenter excerpt is missing its final return (last return was: ${lastReturn || "(none)"})`,
-    );
-  }
-
-  return {
-    left: { title: `${specRel} (excerpt)`, body: dedentBlock(testBody) },
-    right: { title: `${helperRel} (excerpt)`, body: dedentBlock(helperBody) },
-  };
+  return specExcerptsFromTexts({ specRel, specText, helpers });
 }
 
 async function assertSpecPanesDoNotWrap(page) {
@@ -595,6 +485,8 @@ async function assertSpecPanesDoNotWrap(page) {
 
 async function writeSpecPng(page, fonts) {
   const { left, right } = await specExcerpts();
+  const leftLines = left.body.split("\n").length;
+  const rightLines = right.body.split("\n").length;
   const html = path.join(os.tmpdir(), `ubc-spec-${Date.now()}.html`);
   const esc = (value) =>
     value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -613,13 +505,14 @@ async function writeSpecPng(page, fonts) {
         width: ${W}px; height: ${H}px;
       }
       .pane {
-        flex: 1 1 0; min-height: 0; min-width: 0;
+        min-height: 0; min-width: 0;
         box-sizing: border-box;
         padding: 14px 28px 10px;
         border-bottom: 1px solid #374151;
         display: flex; flex-direction: column;
       }
-      .pane:last-child { border-bottom: 0; flex: 1.35 1 0; }
+      .pane:first-child { flex: ${paneFlex(leftLines)}; }
+      .pane:last-child { border-bottom: 0; flex: ${paneFlex(rightLines)}; }
       h2 {
         margin: 0 0 8px; font: 700 18px/1.2 MonoB, ui-monospace, monospace;
         color: #93c5fd; letter-spacing: 0;
@@ -762,12 +655,44 @@ async function encodeGif(srcMp4, dest) {
     "-y",
     "-i",
     srcMp4,
+    "-t",
+    "15",
     "-vf",
     "fps=12,scale=800:-2:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=none",
     "-loop",
     "0",
     dest,
   ]);
+}
+
+async function mediaDurationSeconds(file) {
+  const result = await runCapture("ffprobe", [
+    "-v",
+    "error",
+    "-show_entries",
+    "format=duration",
+    "-of",
+    "default=noprint_wrappers=1:nokey=1",
+    file,
+  ]);
+  if (result.code !== 0) {
+    throw new Error(`ffprobe failed for ${file}: ${result.stderr || result.stdout}`);
+  }
+  const duration = Number.parseFloat(result.stdout.trim());
+  if (!Number.isFinite(duration)) {
+    throw new Error(`ffprobe did not return a duration for ${file}: ${result.stdout}`);
+  }
+  return duration;
+}
+
+async function assertExactDuration(file, expected = 15) {
+  const duration = await mediaDurationSeconds(file);
+  const rounded = duration.toFixed(3);
+  if (rounded !== `${expected}.000`) {
+    throw new Error(
+      `${path.relative(ROOT, file)} duration is ${rounded}s, expected ${expected}.000s`,
+    );
+  }
 }
 
 const CASE_SPECS = [
@@ -941,6 +866,9 @@ async function main() {
     await encodeMp4(squareList, square, "scale=1080:1080:flags=lanczos,setsar=1,fps=30");
     await encodeGif(wide, gif);
 
+    for (const dest of [wide, square, gif]) {
+      await assertExactDuration(dest, 15);
+    }
     for (const dest of [
       wide,
       square,
@@ -948,7 +876,9 @@ async function main() {
       path.join(MEDIA, "spec-hit-test.png"),
     ]) {
       const info = await stat(dest);
-      console.log(`${path.relative(ROOT, dest)} ${info.size} bytes`);
+      const extra =
+        dest.endsWith(".png") ? "" : ` ${((await mediaDurationSeconds(dest)).toFixed(3))}s`;
+      console.log(`${path.relative(ROOT, dest)} ${info.size} bytes${extra}`);
     }
   } finally {
     await browser.close();
