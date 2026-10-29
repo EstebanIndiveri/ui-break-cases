@@ -17,6 +17,10 @@ import {
   scrollToDocumentEnd,
 } from "./helpers.ts";
 import {
+  overflowIsHidden,
+  textRangeClip,
+} from "../skill/lib/geometry.ts";
+import {
   classifyFixedFooterOverlap,
   classifyFixedHeightLabel,
   classifyFixture,
@@ -521,7 +525,7 @@ test.describe("agent-skill surviving mutants", () => {
     expect(classified?.bug ?? false).toBe(false);
   });
 
-  test("N22 footer 4-16px band dies: 10px overlap with hittable action is not fixed", async ({
+  test("N18 footer 4-16px band dies: 10px overlap with hittable action is not fixed", async ({
     page,
   }) => {
     const spec = getCase("fixed-footer-overlap");
@@ -611,9 +615,7 @@ test.describe("agent-skill surviving mutants", () => {
     expect(classified?.resembles).not.toBe("control");
   });
 
-  test("N4 label hidden check dies: painted expand without clip is not control", async ({
-    page,
-  }) => {
+  test("painted expand without clip is not control", async ({ page }) => {
     const spec = getCase("fixed-height-label");
     if (!spec) {
       throw new Error("fixed-height-label missing");
@@ -630,7 +632,39 @@ test.describe("agent-skill surviving mutants", () => {
     expect(classified?.resembles).not.toBe("control");
   });
 
-  test("N12 label expandPainted dies: clipped label with painted expand is not broken", async ({
+  test("N4 label hidden check dies: overflow visible with 47px spill is not control", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.control.path, spec.viewport);
+    await page.locator("#label").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.classList.remove("is-collapsed");
+      el.style.overflow = "visible";
+      el.style.height = "auto";
+    });
+    const natural = await page.locator("#label").evaluate((node) => {
+      return node.getBoundingClientRect().height;
+    });
+    await page.locator("#label").evaluate((node, height) => {
+      (node as HTMLElement).style.height = `${height}px`;
+    }, natural - 47);
+    const clip = await textRangeClip(page, "#label");
+    expect(overflowIsHidden(clip)).toBe(false);
+    expect(clip.clippedBottom).toBeGreaterThan(CLEAR_DEFECT_PX);
+    expect(clip.clippedBottom).toBeGreaterThan(40);
+    expect(clip.clippedBottom).toBeLessThan(55);
+    expect(await isPainted(page, "#expand-toggle")).toBe(true);
+    const classified = await classifyFixedHeightLabel(page);
+    // Original returns null. Removing `hidden &&` at the control gate
+    // would label this "control".
+    expect(classified).toBeNull();
+  });
+
+  test("clipped label with painted expand and no aria is not broken", async ({
     page,
   }) => {
     const spec = getCase("fixed-height-label");
@@ -645,5 +679,29 @@ test.describe("agent-skill surviving mutants", () => {
     const classified = await classifyFixedHeightLabel(page);
     expect(classified?.resembles).not.toBe("broken");
     expect(classified?.bug ?? false).toBe(false);
+  });
+
+  test("N12 hidden overflow with fitting text is not fixed", async ({
+    page,
+  }) => {
+    // skill/cases/fixed-height-label.md: fixed requires overflow is not hidden.
+    // A clipping box that currently holds the string is unclassified, not the
+    // recovery path. Removing `!hidden &&` would return "fixed".
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    await page.locator("#label").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.style.overflow = "hidden";
+      el.style.height = "auto";
+    });
+    const clip = await textRangeClip(page, "#label");
+    expect(overflowIsHidden(clip)).toBe(true);
+    expect(clip.clippedBottom).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);
+    expect(clip.clippedRight).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified).toBeNull();
   });
 });

@@ -36,4 +36,4 @@ Write JSON to `results.json` with this shape:
 
 Use `bug: true` only when `resembles` is `"broken"`. Do not report two different `resembles` / `bug` values for the same `caseId` on one page.
 
-For a **broken** match, `specOutput` must be the captured Playwright output of the generated spec against that page. The scorer parses that string for `Error: expect(received)` and rejects timeouts, `Test timeout of Nms`, and `Rejected to value`. A boolean flag is not a substitute for the captured output.
+For a **broken** match, `specOutput` must be the Playwright stdout/stderr of the generated spec against that page, **self-reported by the agent; the scorer does not re-run specs**. The scorer requires a Playwright `N failed` summary with no `N passed`, plus an `Error: expect(received)` block that includes `Expected:` / `Received:` lines and an `at file:line` frame. Timeouts, `Test timeout of Nms`, and `Rejected to value` are rejected. A boolean flag is not a substitute. Do not add fields this schema does not define (`specFailedViaExpect`, page-level `specOutput`, `spec`, …).

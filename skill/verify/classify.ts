@@ -173,6 +173,9 @@ export async function classifyFixedHeightLabel(
       label.bottom - GEOM_TOLERANCE_PX
     : true;
 
+  // Fixed requires overflow visible, matching skill/cases/fixed-height-label.md.
+  // Hidden overflow whose current string happens to fit is unclassified
+  // (null), not "fixed": the clipping box is still there.
   if (
     !hidden &&
     clip.clippedBottom <= GEOM_TOLERANCE_PX &&
@@ -213,8 +216,8 @@ export async function classifyFixedFooterOverlap(
   const overlap = overlapHeight(action, footer);
   const hit = await hitTestCenter(page, "#last-action");
   const spacerPainted = await isPainted(page, ".spacer");
+  // action.bottom <= footer.top + 4 already implies overlap ≤ 4.
   const clear =
-    overlap <= GEOM_TOLERANCE_PX &&
     action.bottom <= footer.top + GEOM_TOLERANCE_PX &&
     hit.hit?.id === "last-action";
 
