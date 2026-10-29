@@ -15,6 +15,8 @@ It is for people who write UI tests or CSS and want a concrete example to copy. 
 
 ![Side-by-side comparison of the three fixtures. Left column broken, right column fixed, with capture-only red outlines: a long URL overflowing a flex card while Copy stays on screen; a status sentence clipped to one line; Confirm booking covered by a fixed footer.](docs/media/broken-vs-fixed.gif)
 
+**Live demo:** [estebanindiveri.github.io/ui-break-cases](https://estebanindiveri.github.io/ui-break-cases/) · **Releases:** [github.com/EstebanIndiveri/ui-break-cases/releases](https://github.com/EstebanIndiveri/ui-break-cases/releases)
+
 ## Quickstart
 
 ```bash
@@ -48,7 +50,7 @@ npm run build
 npm run preview
 ```
 
-`npm run preview` serves `dist/` at [http://127.0.0.1:4173/](http://127.0.0.1:4173/). The Vite `base` is `./`, so asset and fixture URLs stay relative. Vite’s preview server does not remount `public/` files under `/ui-break-cases/`; see [Live demo](#live-demo-coming-soon) for the Pages build.
+`npm run preview` serves `dist/` at [http://127.0.0.1:4173/](http://127.0.0.1:4173/). The Vite `base` is `./`, so asset and fixture URLs stay relative. Vite’s preview server does not remount `public/` files under `/ui-break-cases/`; see [Live demo](#live-demo) for the Pages build.
 
 ## Chromium for Playwright
 
@@ -124,15 +126,14 @@ Limitations:
 - Geometry helpers are fixture-specific.
 - No URL scanner, backend, accounts, LLM, MCP, browser extension, npm publish, or extra cases.
 - Screenshots are evidence, not the assertion.
-- GitHub Pages is not enabled. The live demo URL below is the intended address after a later publish.
 
-## Live demo (coming soon)
+## Live demo
 
-GitHub Pages is not enabled yet.
-
-When it is published later, the gallery is expected at:
+The gallery is published at:
 
 https://estebanindiveri.github.io/ui-break-cases/
+
+Tagged snapshots are on the [releases](https://github.com/EstebanIndiveri/ui-break-cases/releases) page.
 
 To produce that build:
 
@@ -140,7 +141,7 @@ To produce that build:
 npm run build:pages
 ```
 
-That writes `dist/` with asset URLs under `/ui-break-cases/`. Upload the contents of `dist/` as the GitHub Pages project site. `npm run check:pages` serves the same tree locally and asserts HTTP 200 for the gallery, hashed assets, and all nine fixtures.
+That writes `dist/` with asset URLs under `/ui-break-cases/`. The GitHub Pages project site serves the `gh-pages` branch from that tree. `npm run check:pages` serves the same tree locally and asserts HTTP 200 for the gallery, hashed assets, and all nine fixtures.
 
 ## Contribute
 
