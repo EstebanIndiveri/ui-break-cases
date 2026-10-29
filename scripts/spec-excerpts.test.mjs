@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   extractBrokenTest,
   paneFlex,
+  SKILL_GEOMETRY_REL,
   specExcerptsFromTexts,
 } from "./lib/spec-excerpts.mjs";
 
@@ -75,7 +76,7 @@ function excerpts(specText, helpers) {
   return specExcerptsFromTexts({
     specRel: SPEC_REL,
     specText,
-    helpers: helpers ?? [{ rel: "tests/helpers.ts", text: HIT_TEST_CENTER }],
+    helpers: helpers ?? [{ rel: SKILL_GEOMETRY_REL, text: HIT_TEST_CENTER }],
   });
 }
 
@@ -142,10 +143,7 @@ describe("hitTestCenter excerpt errors", () => {
     }
     lines.push("  return { x, y, hit, target };");
     lines.push("}");
-    const helpers = [
-      { rel: "tests/helpers.ts", text: lines.join("\n") },
-      { rel: "skill/lib/geometry.ts", text: HIT_TEST_CENTER },
-    ];
+    const helpers = [{ rel: SKILL_GEOMETRY_REL, text: lines.join("\n") }];
     assert.throws(
       () => excerpts(specWith(BROKEN_TEST), helpers),
       (error) => {
@@ -159,7 +157,7 @@ describe("hitTestCenter excerpt errors", () => {
   it("rethrows unterminated instead of reporting an empty excerpt", () => {
     const helpers = [
       {
-        rel: "tests/helpers.ts",
+        rel: SKILL_GEOMETRY_REL,
         text: `function hitTestCenter() {\n  return { x, y, hit, target };\n`,
       },
     ];
@@ -173,13 +171,29 @@ describe("hitTestCenter excerpt errors", () => {
     );
   });
 
-  it("skips a missing helper file and uses the next one", () => {
+  it("fails if skill/lib/geometry.ts is missing even when tests/helpers.ts has the function", () => {
+    assert.throws(
+      () =>
+        excerpts(specWith(BROKEN_TEST), [
+          { rel: "tests/helpers.ts", text: HIT_TEST_CENTER },
+          { rel: SKILL_GEOMETRY_REL, text: null },
+        ]),
+      /searched skill\/lib\/geometry\.ts/,
+    );
+  });
+
+  it("uses skill/lib/geometry.ts even when tests/helpers.ts is listed first", async () => {
+    const geometry = await readFile(
+      path.join(ROOT, SKILL_GEOMETRY_REL),
+      "utf8",
+    );
     const result = excerpts(specWith(BROKEN_TEST), [
-      { rel: "tests/helpers.ts", text: null },
-      { rel: "skill/lib/geometry.ts", text: HIT_TEST_CENTER },
+      { rel: "tests/helpers.ts", text: HIT_TEST_CENTER },
+      { rel: SKILL_GEOMETRY_REL, text: geometry },
     ]);
     assert.equal(result.right.title, "skill/lib/geometry.ts (excerpt)");
     assert.match(result.right.body, /elementFromPoint/);
+    assert.match(result.right.body, /Hit \| null/);
   });
 });
 

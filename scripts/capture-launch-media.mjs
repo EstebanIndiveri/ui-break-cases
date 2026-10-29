@@ -413,7 +413,7 @@ function isMissingFile(error) {
 async function specExcerpts() {
   const specRel = "tests/fixed-footer-overlap.spec.ts";
   const specText = await readSource(specRel);
-  const helperFiles = ["tests/helpers.ts", "skill/lib/geometry.ts"];
+  const helperFiles = ["skill/lib/geometry.ts"];
   const helpers = [];
   for (const rel of helperFiles) {
     try {
