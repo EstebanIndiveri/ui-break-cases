@@ -3,78 +3,39 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Page p07</title>
+    <title>Invoice ready</title>
     <style>
-      html {
-        -webkit-text-size-adjust: 100%;
+      body { margin: 0; background: #0f172a; color: #e2e8f0; font-family: Georgia, serif; }
+      header { padding: 20px 24px 8px; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #94a3b8; }
+      .stage { padding: 8px 24px 32px; }
+      #panel {
+        display: flex; align-items: center; gap: 10px;
+        width: 240px; box-sizing: border-box; padding: 14px 12px;
+        background: #1e293b; border: 2px dashed #38bdf8; border-radius: 2px;
       }
-      body {
-        margin: 0;
-        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-        background: #f4f1ea;
-        color: #1c1917;
-      }
-main {
-        padding: 16px;
-      }
-      #card {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        width: 252px;
-        box-sizing: border-box;
-        padding: 16px;
-        background: #fff;
-        border: 1px solid #d6d3d1;
-        border-radius: 12px;
-      }
-      .body {
-        flex: 1 1 auto;
-        min-width: 0;
-      }
-      .kicker {
-        margin: 0 0 6px;
-        font-size: 12px;
-        color: #57534e;
-      }
-      #long-text {
-        margin: 0;
-        font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-        font-size: 13px;
-        line-height: 1.4;
-        overflow-wrap: anywhere;
-      }
-      #action {
-        flex: 0 0 auto;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 40px;
-        padding: 8px 14px;
-        border-radius: 8px;
-        background: #1d4ed8;
-        color: #fff;
-        text-decoration: none;
-        font-weight: 600;
-        white-space: nowrap;
+      .cluster { flex: 1 1 auto; min-width:0; }
+      #payload { margin: 0; font: 12px/1.45 "Courier New", monospace; color: #7dd3fc; overflow-wrap:anywhere; }
+      #go {
+        flex: 0 0 auto; padding: 10px 12px; background: #f97316; color: #111;
+        font: 700 12px/1 Verdana, sans-serif; text-decoration: none; white-space: nowrap;
       }
     </style>
   </head>
   <body>
-    <main>
-      <article id="card">
-        <div class="body" id="text-column">
-          <p class="kicker">Webhook target</p>
-          <p id="long-text">https://api.example.test/evt_9f3c2a</p>
+    <header>Accounts payable · batch 17</header>
+    <div class="stage">
+      <aside id="panel">
+        <div class="cluster">
+          <p id="payload">acct:99-omega/ref=very-long-unbroken-settlement-token-88421</p>
         </div>
-        <a id="action" href="#copy">Copy</a>
-      </article>
-      <p id="action-status" hidden>Copied</p>
-    </main>
+        <a id="go" href="#dup">Duplicate</a>
+      </aside>
+      <p id="note" hidden>Duplicated</p>
+    </div>
     <script>
-      document.getElementById("action").addEventListener("click", (event) => {
+      document.getElementById("go").addEventListener("click", (event) => {
         event.preventDefault();
-        document.getElementById("action-status").hidden = false;
+        document.getElementById("note").hidden = false;
       });
     </script>
   </body>

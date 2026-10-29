@@ -12,20 +12,19 @@ Install outside this repository is recorded in [temp-project.md](temp-project.md
 
 ## Blind re-run
 
-A **blind** re-run (neutral filenames, no banners) is prepared for a **fresh** agent. Do not have the skill-authoring agent take that run.
+The run **currently in progress** ([bc-170139f1](https://cursor.com/agents/bc-170139f1) on `blind-run` `e17125a`) is **isolated by instruction, not blind**. The pages on that commit are neutralized copies of `public/fixtures/<case>/<variant>.html` (about 12–16 lines of diff: title and banner). Anyone who diffs them against this repo, or fetches another ref, recovers the mapping. Isolation was “do not look at other branches,” not a rewrite of the HTML.
 
-Give that agent the `blind-run` branch only (`prompt.md` + `set/` at the top level). Score later with [blind/score.mjs](blind/score.mjs) against a mapping file that is **not** in the repo:
+Do not have the skill-authoring agent take a scoring run. Do not push a replacement `blind-run` while that agent is running.
+
+A builder that **does** rewrite copy, colors, ids, wrappers, and section content lives in [blind/build-set.mjs](blind/build-set.mjs). It writes answers only to `/tmp/ubc-blind-mapping.json` (or `$UBC_BLIND_MAPPING`) and fails if 12-gram Jaccard similarity to any public fixture is ≥ 0.35.
 
 ```bash
 node docs/agent-runs/blind/build-set.mjs
-# writes pages into docs/agent-runs/blind/set/
-# writes answers to /tmp/ubc-blind-mapping.json (or $UBC_BLIND_MAPPING)
-
 node docs/agent-runs/blind/score.mjs /tmp/ubc-blind-mapping.json path/to/results.json
 ```
 
 ### Limitations (plain)
 
-- An earlier commit on this branch (`37b2f02`) still contains `docs/agent-runs/blind/mapping.json`. Anyone who can read this branch’s history can recover that old p01–p09 mapping. Deleting the file from HEAD does not erase it.
-- Putting the pages on the orphan `blind-run` branch is **instruction-based isolation**, not a hard guarantee. A determined agent can still fetch other refs, walk history, or match HTML against `public/fixtures`. Do not treat “we told it not to look” as cryptographic blindness.
-- Rebuilds shuffle p01–p09 again. Keep the mapping that matches the pages you actually shipped; do not commit it.
+- Commit `37b2f02` still contains `docs/agent-runs/blind/mapping.json` in this branch’s history.
+- `blind-run` at `e17125a` is instruction-based isolation, not a hard guarantee, and not a geometric rewrite.
+- Rebuilds shuffle p01–p09. Keep the mapping that matches the pages you actually shipped; do not commit it.

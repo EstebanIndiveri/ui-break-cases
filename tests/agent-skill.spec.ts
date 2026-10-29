@@ -377,9 +377,112 @@ test.describe("agent-skill surviving mutants", () => {
       el.style.position = "relative";
       el.style.left = `${dx}px`;
     }, shift);
-    const withSlack = await classifyFlexLongText(page, CLEAR_DEFECT_PX, 4);
+    const withSlack = await classifyFlexLongText(page);
     const withZero = await classifyFlexLongText(page, CLEAR_DEFECT_PX, 0);
+    expect(GEOM_TOLERANCE_PX).toBe(4);
     expect(withSlack?.resembles).toBe("fixed");
     expect(withZero?.resembles).not.toBe("fixed");
+  });
+
+  test("4-16px band dies: 10px of flex overflow is not broken at CLEAR_DEFECT_PX", async ({
+    page,
+  }) => {
+    const spec = getCase("flex-long-text");
+    if (!spec) {
+      throw new Error("flex-long-text missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    const card = await boundingRect(page, "#card");
+    const action = await boundingRect(page, "#action");
+    const shift = card.right - action.right + 10;
+    await page.locator("#action").evaluate((node, dx) => {
+      const el = node as HTMLElement;
+      el.style.position = "relative";
+      el.style.left = `${dx}px`;
+    }, shift);
+    const text = await boundingRect(page, "#long-text");
+    const moved = await boundingRect(page, "#action");
+    const overflow = Math.max(
+      horizontalOverflow(text, card),
+      horizontalOverflow(moved, card),
+    );
+    expect(overflow).toBeGreaterThan(GEOM_TOLERANCE_PX);
+    expect(overflow).toBeLessThanOrEqual(CLEAR_DEFECT_PX);
+    expect(isClearFlexOverflow(overflow, moved.right, card.right)).toBe(false);
+    expect(isClearFlexOverflow(overflow, moved.right, card.right, 4)).toBe(true);
+    const classified = await classifyFlexLongText(page);
+    expect(classified?.resembles).not.toBe("broken");
+    expect(classified?.bug ?? false).toBe(false);
+  });
+
+  test("position:fixed check dies: absolute footer overlap is not this case", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-footer-overlap");
+    if (!spec) {
+      throw new Error("fixed-footer-overlap missing");
+    }
+    await openFixture(page, spec.variants.broken.path, spec.viewport);
+    await page.locator("#site-footer").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.style.position = "absolute";
+    });
+    const classified = await classifyFixedFooterOverlap(page);
+    expect(classified).toBeNull();
+  });
+
+  test("pageContained dies: local scroll plus page overflow is not control", async ({
+    page,
+  }) => {
+    const spec = getCase("flex-long-text");
+    if (!spec) {
+      throw new Error("flex-long-text missing");
+    }
+    await openFixture(page, spec.variants.control.path, spec.viewport);
+    await page.evaluate(() => {
+      const wide = document.createElement("div");
+      wide.style.cssText = "width:2400px;height:1px";
+      document.body.append(wide);
+    });
+    const classified = await classifyFlexLongText(page);
+    expect(classified?.resembles).not.toBe("control");
+  });
+
+  test("label hidden check dies: visible overflow on a tall sentence is not broken", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.broken.path, spec.viewport);
+    await page.locator("#label").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.style.overflow = "visible";
+      el.style.height = "24px";
+    });
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).not.toBe("broken");
+    expect(classified?.bug ?? false).toBe(false);
+  });
+
+  test("label clip threshold dies: 8px of clip is not broken", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.broken.path, spec.viewport);
+    await page.locator("#label").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.style.height = "auto";
+      el.style.overflow = "hidden";
+      const full = el.scrollHeight;
+      el.style.height = `${Math.max(8, full - 8)}px`;
+    });
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).not.toBe("broken");
+    expect(classified?.bug ?? false).toBe(false);
   });
 });

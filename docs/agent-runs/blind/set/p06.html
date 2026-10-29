@@ -3,100 +3,42 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Page p06</title>
+    <title>Library hold</title>
     <style>
-      html {
-        -webkit-text-size-adjust: 100%;
+      body { margin: 0; background: #fdf4ff; color: #581c87; font-family: "Gill Sans", "Gill Sans MT", sans-serif; }
+      .page {
+        box-sizing: border-box; min-height: 100vh; display: flex; flex-direction: column;
+        padding: 18px 18px 96px;
       }
-      body {
-        margin: 0;
-        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-        background: #f4f1ea;
-        color: #1c1917;
+      h2 { margin: 0 0 12px; font-size: 22px; }
+      .blurb { margin: 0 0 10px; line-height: 1.45; }
+      #finish {
+        display: block; width: 100%; box-sizing: border-box; margin-top: auto;
+        min-height: 44px; border: 0; border-radius: 0;
+        background: #6d28d9; color: #faf5ff; font: 700 15px/1.2 inherit;
       }
-main {
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-        padding: 16px;
-      }
-      h1 {
-        margin: 0 0 12px;
-        font-size: 20px;
-      }
-      p {
-        margin: 0 0 12px;
-        line-height: 1.5;
-        color: #44403c;
-      }
-      #last-action {
-        display: block;
-        width: 100%;
-        box-sizing: border-box;
-        min-height: 44px;
-        margin-top: auto;
-        padding: 10px 16px;
-        border: 0;
-        border-radius: 8px;
-        background: #1d4ed8;
-        color: #fff;
-        font: inherit;
-        font-weight: 700;
-      }
-      .spacer {
-        height: 72px;
-      }
-      #site-footer {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 72px;
-        box-sizing: border-box;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        background: #1c1917;
-        color: #fafaf9;
-        font-size: 14px;
-      }
-      #save-status {
-        font-weight: 600;
+      .gap { height: 64px; }
+      #dock {
+        position: fixed; left: 0; right: 0; bottom: 0; height: 64px;
+        display: flex; align-items: center; justify-content: center;
+        background: #2e1065; color: #f5d0fe; font-size: 13px;
       }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Checkout</h1>
-      <p>
-        Studio desk, Thursday 18:30–19:15. Bring the signed waiver and the
-        locker code emailed this morning.
-      </p>
-      <p>
-        Guests check in at the front desk. Late arrivals after 10 minutes are
-        treated as a missed slot and the hold is released.
-      </p>
-      <p>
-        Parking is in the south lot. Use the pedestrian gate next to the loading
-        dock; the street door stays locked after 18:00.
-      </p>
-      <p>
-        This hold expires if you leave without confirming. The last control sits
-        at the end of the page.
-      </p>
-      <button id="last-action" type="button">Confirm booking</button>
-      <p id="action-status" hidden>Booking confirmed</p>
-    </main>
-    <div class="spacer" aria-hidden="true"></div>
-    <footer id="site-footer">
-      <span id="save-status">Draft saved</span>
-      <span>Desk line 555-0142</span>
-    </footer>
+    <div class="page">
+      <h2>Hold expires tonight</h2>
+      <p class="blurb">Volume 3 of the coastal atlas is waiting at desk B. Bring the card that matches the name on the slip.</p>
+      <p class="blurb">Quiet-floor rules apply after 18:00. Bags stay in the lobby lockers.</p>
+      <p class="blurb">If you skip pickup the next patron on the list is notified at 21:00 sharp.</p>
+      <button id="finish" type="button">Take the hold</button>
+      <p id="done" hidden>Hold taken</p>
+      
+    </div>
+    <div id="dock">Desk B · ask for slip 441</div>
     <script>
-      document.getElementById("last-action").addEventListener("click", () => {
-        document.getElementById("action-status").hidden = false;
+      document.getElementById("finish").addEventListener("click", () => {
+        document.getElementById("done").hidden = false;
       });
     </script>
   </body>

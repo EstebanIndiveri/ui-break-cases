@@ -18,7 +18,7 @@
  */
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PREVIEW = "http://127.0.0.1:4173";
@@ -132,6 +132,8 @@ function expectAssertionFailed(output) {
   if (
     /Timed out \d+ms/i.test(output) ||
     /Timeout \d+ms/i.test(output) ||
+    /Test timeout of \d+ms/i.test(output) ||
+    /Rejected to value/i.test(output) ||
     /element\(s\) not found/i.test(output)
   ) {
     return false;
@@ -265,10 +267,38 @@ async function templates() {
   }
 }
 
+async function timeoutRegression() {
+  console.log("\n# empty.html missing selector is not FAIL via expect()\n");
+  const emptyUrl = pathToFileURL(path.join(ROOT, "tests", "empty.html")).href;
+  const spec = path.join("skill/templates", "flex-long-text.spec.ts");
+  const result = await run(
+    ["-c", "playwright.skill.config.ts", spec, "--reporter=list", "--timeout=8000"],
+    { UI_BREAK_TARGET_URL: emptyUrl },
+  );
+  printOutput("empty.html timeout", result);
+  const output = `${result.stdout}\n${result.stderr}`;
+  const expectFail = expectAssertionFailed(output);
+  const timedOut =
+    /Test timeout of \d+ms/i.test(output) || /Rejected to value/i.test(output);
+  const ok = result.code !== 0 && !expectFail && timedOut;
+  record({
+    caseId: "empty.html",
+    variant: "n/a",
+    check: "timeout-not-expect",
+    ok,
+    detail: expectFail
+      ? "timeout was counted as FAIL via expect() (bad)"
+      : ok
+        ? "timeout / rejected locator is not FAIL via expect()"
+        : "empty.html did not time out as expected",
+  });
+}
+
 async function main() {
   await copies();
   await detection();
   await templates();
+  await timeoutRegression();
 
   console.log("\n# Per-check counts\n");
   for (const row of rows) {

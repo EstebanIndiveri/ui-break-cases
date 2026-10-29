@@ -3,77 +3,32 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Page p02</title>
+    <title>Kitchen ticket</title>
     <style>
-      html {
-        -webkit-text-size-adjust: 100%;
-      }
-      body {
-        margin: 0;
-        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-        background: #f4f1ea;
-        color: #1c1917;
-      }
-main {
-        padding: 16px;
-      }
-      #card {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        width: 252px;
-        box-sizing: border-box;
-        padding: 16px;
-        background: #fff;
-        border: 1px solid #d6d3d1;
-        border-radius: 12px;
-      }
-      .body {
-        flex: 1 1 auto;
-      }
-      .kicker {
-        margin: 0 0 6px;
-        font-size: 12px;
-        color: #57534e;
-      }
-      #long-text {
-        margin: 0;
-        font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-        font-size: 13px;
-        line-height: 1.4;
-      }
-      #action {
-        flex: 0 0 auto;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 40px;
-        padding: 8px 14px;
-        border-radius: 8px;
-        background: #1d4ed8;
-        color: #fff;
-        text-decoration: none;
-        font-weight: 600;
-        white-space: nowrap;
-      }
+      body { margin: 0; background: #fff7ed; color: #7c2d12; font-family: "Trebuchet MS", sans-serif; }
+      .sheet { margin: 24px; padding: 18px; background: #ffedd5; border: 4px solid #ea580c; }
+      h2 { margin: 0 0 10px; font-size: 15px; }
+      #headline { margin: 0; font-size: 16px; line-height: 24px; height:auto;overflow:visible; }
+      #follow { margin: 18px 0 0; font-size: 13px; color: #9a3412; }
+      #headline.shut { height: 24px; overflow: hidden; }
+         #more { margin-top: 8px; padding: 8px 10px; background: #fde68a; border: 0; font: 600 13px Verdana, sans-serif; }
     </style>
   </head>
   <body>
-    <main>
-      <article id="card">
-        <div class="body" id="text-column">
-          <p class="kicker">Webhook target</p>
-          <p id="long-text">https://api.example.test/evt_9f3c2a</p>
-        </div>
-        <a id="action" href="#copy">Copy</a>
-      </article>
-      <p id="action-status" hidden>Copied</p>
-    </main>
-    <script>
-      document.getElementById("action").addEventListener("click", (event) => {
-        event.preventDefault();
-        document.getElementById("action-status").hidden = false;
-      });
-    </script>
+    <div class="sheet">
+      <h2>Pass 4 · grill</h2>
+      <p id="headline" class="shut">Allergen note: this plate includes toasted sesame, aged soy, and a reduced brown-butter glaze that must stay on the ticket</p>
+      <button id="more" type="button" aria-expanded="false">Open remainder</button>
+        <script>
+          const label = document.getElementById("headline");
+          const btn = document.getElementById("more");
+          btn.addEventListener("click", () => {
+            const open = btn.getAttribute("aria-expanded") === "true";
+            btn.setAttribute("aria-expanded", open ? "false" : "true");
+            label.classList.toggle("shut", open);
+          });
+        </script>
+      <p id="follow">Runner window closes at 19:40. Do not fire dessert until this ticket is bumped.</p>
+    </div>
   </body>
 </html>
