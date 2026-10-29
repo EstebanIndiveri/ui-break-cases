@@ -161,13 +161,14 @@ async function injectOutline(page, selector, color) {
         return;
       }
       const rect = target.getBoundingClientRect();
+      const pad = 8;
       const outline = document.createElement("div");
       outline.style.cssText = [
         "position:fixed",
-        `left:${rect.left}px`,
-        `top:${rect.top}px`,
-        `width:${rect.width}px`,
-        `height:${rect.height}px`,
+        `left:${rect.left - pad}px`,
+        `top:${rect.top - pad}px`,
+        `width:${rect.width + pad * 2}px`,
+        `height:${rect.height + pad * 2}px`,
         `border:3px solid ${outlineColor}`,
         "box-sizing:border-box",
         "pointer-events:none",
@@ -227,8 +228,13 @@ async function writeCard(page, tmp, name, title, subtitle, fonts) {
         align-items: center; padding: 64px; text-align: center; gap: 18px;
       }
       h1 {
-        margin: 0; font: 700 52px/1.1 InterB, system-ui, sans-serif;
-        letter-spacing: -0.04em;
+        margin: 0; font: 700 44px/1.15 InterB, system-ui, sans-serif;
+        letter-spacing: -0.03em;
+        max-width: 1100px;
+      }
+      h1 .line {
+        display: block;
+        white-space: nowrap;
       }
       p {
         margin: 0; font: 400 26px/1.35 InterR, system-ui, sans-serif;
@@ -255,7 +261,7 @@ async function composeFixtureFrame(page, tmp, rawPng, variant, caption, fonts) {
   const barBg = broken ? "#7f1d1d" : "#14532d";
   const barFg = broken ? "#fff7ed" : "#ecfdf3";
   const label = broken ? "BROKEN" : "FIXED";
-  const cap = !broken && caption ? ` · ${caption}` : "";
+  const cap = !broken && caption ? caption : "";
   await writeFile(
     html,
     `<!doctype html>
@@ -271,13 +277,23 @@ async function composeFixtureFrame(page, tmp, rawPng, variant, caption, fonts) {
       }
       .bar {
         height: ${BAR}px; box-sizing: border-box;
-        padding: 0 24px; display: flex; align-items: center;
+        padding: 0 24px; display: flex; align-items: center; gap: 12px;
         background: ${barBg}; color: ${barFg};
-        font: 700 22px/1.2 InterB, system-ui, sans-serif;
-        letter-spacing: 0.04em;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        white-space: nowrap; overflow: hidden;
       }
-      .bar span { font: 600 16px/1.3 Mono, ui-monospace, monospace; letter-spacing: 0; opacity: 0.95; }
+      .bar .kind {
+        font: 700 22px/1.2 InterB, system-ui, sans-serif;
+        letter-spacing: 0.06em;
+        flex: 0 0 auto;
+      }
+      .bar .cap {
+        font: 600 16px/1.3 Mono, ui-monospace, monospace;
+        letter-spacing: 0;
+        opacity: 0.95;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
       .stage {
         flex: 1; display: flex; align-items: center; justify-content: center;
         padding: 16px 24px 24px;
@@ -291,7 +307,9 @@ async function composeFixtureFrame(page, tmp, rawPng, variant, caption, fonts) {
   </head>
   <body>
     <div class="frame">
-      <div class="bar">${label}<span>${cap}</span></div>
+      <div class="bar"><span class="kind">${label}</span>${
+        cap ? `<span class="cap">${cap.trim()}</span>` : ""
+      }</div>
       <div class="stage"><img alt="" src="${pathToFileURL(rawPng).href}" /></div>
     </div>
   </body>
@@ -302,12 +320,13 @@ async function composeFixtureFrame(page, tmp, rawPng, variant, caption, fonts) {
   return dest;
 }
 
-async function writeTerminalFrame(page, tmp, transcript, fonts) {
+async function writeTerminalFrame(page, tmp, name, transcript, fonts, size) {
   const escaped = transcript
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
-  const html = path.join(tmp, "terminal.html");
+  const html = path.join(tmp, `${name}.html`);
+  const barH = size.barH;
   await writeFile(
     html,
     `<!doctype html>
@@ -317,19 +336,19 @@ async function writeTerminalFrame(page, tmp, transcript, fonts) {
     <style>
       @font-face { font-family: Mono; src: url("${pathToFileURL(fonts.mono).href}"); }
       @font-face { font-family: MonoB; src: url("${pathToFileURL(fonts.monoBold).href}"); font-weight: 700; }
-      html, body { margin: 0; width: ${W}px; height: ${H}px; background: #111827; color: #e5e7eb; }
+      html, body { margin: 0; width: ${size.width}px; height: ${size.height}px; background: #111827; color: #e5e7eb; }
       .bar {
-        height: 36px; background: #1f2937; color: #9ca3af;
-        font: 700 16px/36px MonoB, ui-monospace, monospace;
-        padding: 0 16px;
+        height: ${barH}px; background: #1f2937; color: #9ca3af;
+        font: 700 ${size.barFont}px/${barH}px MonoB, ui-monospace, monospace;
+        padding: 0 ${size.pad}px;
       }
       pre {
-        margin: 0; padding: 16px 20px;
-        font: 16px/1.4 Mono, ui-monospace, monospace;
+        margin: 0; padding: ${size.pad}px;
+        font: ${size.font}px/${size.lineHeight} Mono, ui-monospace, monospace;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
         word-break: break-word;
-        height: ${H - 36}px; box-sizing: border-box; overflow: hidden;
+        height: ${size.height - barH}px; box-sizing: border-box; overflow: hidden;
       }
     </style>
   </head>
@@ -339,30 +358,82 @@ async function writeTerminalFrame(page, tmp, transcript, fonts) {
   </body>
 </html>`,
   );
-  const dest = path.join(tmp, "terminal.png");
-  await screenshotHtml(page, html, dest, W, H);
+  const dest = path.join(tmp, `${name}.png`);
+  await screenshotHtml(page, html, dest, size.width, size.height);
   return dest;
 }
 
-async function fileExcerpt(rel, startLine, endLine, excerpt) {
-  const text = await readFile(path.join(ROOT, rel), "utf8");
+function extractIndentedBlock(text, startRe) {
   const lines = text.split("\n");
-  const body = lines.slice(startLine - 1, endLine).slice(0, 15).join("\n");
-  return {
-    title: excerpt ? `${rel} (excerpt)` : rel,
-    body,
-  };
+  const start = lines.findIndex((line) => startRe.test(line));
+  if (start < 0) {
+    return "";
+  }
+  const indent = lines[start].match(/^(\s*)/)[1];
+  const closers = new Set([
+    `${indent}}`,
+    `${indent}});`,
+    `${indent}})`,
+  ]);
+  for (let i = start + 1; i < lines.length; i += 1) {
+    if (closers.has(lines[i])) {
+      return lines.slice(start, i + 1).join("\n");
+    }
+  }
+  return "";
+}
+
+async function readSource(rel) {
+  return readFile(path.join(ROOT, rel), "utf8");
 }
 
 async function specExcerpts() {
-  const left = await fileExcerpt(
-    "tests/fixed-footer-overlap.spec.ts",
-    21,
-    30,
-    false,
+  const specRel = "tests/fixed-footer-overlap.spec.ts";
+  const specText = await readSource(specRel);
+  const testBody = extractIndentedBlock(
+    specText,
+    /test\(\s*"broken:/,
   );
-  const right = await fileExcerpt("tests/helpers.ts", 163, 177, true);
-  return { left, right };
+  if (testBody.trim().length === 0) {
+    throw new Error(
+      `spec excerpt empty: no broken test in ${specRel}`,
+    );
+  }
+  if (!testBody.includes("expect(")) {
+    throw new Error(
+      `spec excerpt for ${specRel} is missing an assertion`,
+    );
+  }
+
+  const helperFiles = ["tests/helpers.ts", "skill/lib/geometry.ts"];
+  let helperRel = "";
+  let helperBody = "";
+  for (const rel of helperFiles) {
+    try {
+      const text = await readSource(rel);
+      const body = extractIndentedBlock(text, /function hitTestCenter\b/);
+      if (body.trim().length > 0) {
+        helperRel = rel;
+        helperBody = body;
+        break;
+      }
+    } catch {
+      // File may not exist on this branch (skill/lib is v0.2).
+    }
+  }
+  if (helperBody.trim().length === 0) {
+    throw new Error(
+      "hitTestCenter excerpt is empty (searched tests/helpers.ts and skill/lib/geometry.ts)",
+    );
+  }
+  if (!/return\s*\{/.test(helperBody)) {
+    throw new Error("hitTestCenter excerpt is missing its return");
+  }
+
+  return {
+    left: { title: `${specRel} (excerpt)`, body: testBody },
+    right: { title: `${helperRel} (excerpt)`, body: helperBody },
+  };
 }
 
 async function writeSpecPng(page, fonts) {
@@ -428,7 +499,6 @@ function concatList(entries) {
 }
 
 async function encodeMp4(listPath, dest, sizeFilter) {
-  const vf = sizeFilter;
   await run("ffmpeg", [
     "-hide_banner",
     "-loglevel",
@@ -440,10 +510,12 @@ async function encodeMp4(listPath, dest, sizeFilter) {
     "0",
     "-i",
     listPath,
+    "-t",
+    "15",
     "-r",
     "30",
     "-vf",
-    vf,
+    sizeFilter,
     "-c:v",
     "libx264",
     "-pix_fmt",
@@ -451,6 +523,20 @@ async function encodeMp4(listPath, dest, sizeFilter) {
     "-an",
     "-movflags",
     "+faststart",
+    dest,
+  ]);
+}
+
+async function padToSquare(src, dest) {
+  await run("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-i",
+    src,
+    "-vf",
+    "scale=1080:1080:force_original_aspect_ratio=decrease,pad=1080:1080:(ow-iw)/2:(oh-ih)/2:color=0xf4f1ea",
     dest,
   ]);
 }
@@ -471,16 +557,58 @@ async function encodeGif(srcMp4, dest) {
   ]);
 }
 
+const CASE_SPECS = [
+  "flex-long-text.spec.ts",
+  "fixed-height-label.spec.ts",
+  "fixed-footer-overlap.spec.ts",
+];
+const VARIANT_ORDER = ["broken", "fixed", "control"];
+
+function specIndex(line) {
+  return CASE_SPECS.findIndex((spec) => line.includes(spec));
+}
+
+function variantIndex(line) {
+  const found = VARIANT_ORDER.findIndex((variant) =>
+    new RegExp(`\\b${variant}\\b`).test(line),
+  );
+  return found === -1 ? VARIANT_ORDER.length : found;
+}
+
 function trimPlaywrightOutput(stdout, stderr) {
   const text = `${stdout}${stderr}`.replace(/\r/g, "");
   const lines = text
     .split("\n")
+    .map((line) => line.replace(/\x1b\[[0-9;]*m/g, ""))
     .filter((line) => !line.includes("NO_COLOR"))
-    .filter((line) => !line.includes("trace-warnings"));
-  const start = lines.findIndex((line) => /Running \d+ tests/.test(line));
-  const sliced = start >= 0 ? lines.slice(start) : lines;
-  const keep = sliced.filter((line) => line.trim().length > 0).slice(-14);
-  return keep.join("\n");
+    .filter((line) => !line.includes("trace-warnings"))
+    .filter((line) => line.trim().length > 0);
+
+  const header = lines.find((line) => /Running \d+ tests/.test(line));
+  if (!header) {
+    throw new Error("Playwright transcript is missing the Running N tests header");
+  }
+  const summary = [...lines]
+    .reverse()
+    .find((line) => /\d+ passed/.test(line) && !line.includes("›"));
+
+  const tests = lines
+    .filter((line) => specIndex(line) >= 0)
+    .sort((a, b) => {
+      const spec = specIndex(a) - specIndex(b);
+      if (spec !== 0) {
+        return spec;
+      }
+      return variantIndex(a) - variantIndex(b);
+    });
+
+  for (const spec of CASE_SPECS) {
+    if (!tests.some((line) => line.includes(spec))) {
+      throw new Error(`Playwright transcript is missing tests for ${spec}`);
+    }
+  }
+
+  return [header, ...tests, summary].filter(Boolean).join("\n");
 }
 
 async function main() {
@@ -503,7 +631,7 @@ async function main() {
       page,
       tmp,
       "end",
-      "github.com/EstebanIndiveri/ui-break-cases",
+      '<span class="line">github.com/EstebanIndiveri/</span><span class="line">ui-break-cases</span>',
       "Reproducible bugs, explained fixes, tests you can reuse.",
       fonts,
     );
@@ -529,7 +657,11 @@ async function main() {
     const testRun = await runCapture("npx", [
       "playwright",
       "test",
+      "tests/flex-long-text.spec.ts",
+      "tests/fixed-height-label.spec.ts",
+      "tests/fixed-footer-overlap.spec.ts",
       "--reporter=list",
+      "--workers=1",
     ]);
     if (testRun.code !== 0) {
       throw new Error(
@@ -537,25 +669,68 @@ async function main() {
       );
     }
     const transcript = trimPlaywrightOutput(testRun.stdout, testRun.stderr);
-    const terminal = await writeTerminalFrame(page, tmp, transcript, fonts);
+    console.log("Terminal transcript:\n" + transcript);
+    const terminalWide = await writeTerminalFrame(
+      page,
+      tmp,
+      "terminal-wide",
+      transcript,
+      fonts,
+      {
+        width: W,
+        height: H,
+        barH: 36,
+        barFont: 16,
+        font: 18,
+        lineHeight: 1.4,
+        pad: 20,
+      },
+    );
+    const terminalSquare = await writeTerminalFrame(
+      page,
+      tmp,
+      "terminal-square",
+      transcript,
+      fonts,
+      {
+        width: 1080,
+        height: 1080,
+        barH: 48,
+        barFont: 22,
+        font: 22,
+        lineHeight: 1.35,
+        pad: 28,
+      },
+    );
 
     await writeSpecPng(page, fonts);
 
+    const wideEntries = [
+      { file: title, duration: 1.5 },
+      { file: frames[0].file, duration: 1.5 },
+      { file: frames[1].file, duration: 1.5 },
+      { file: frames[2].file, duration: 1.5 },
+      { file: frames[3].file, duration: 1.5 },
+      { file: frames[4].file, duration: 1.5 },
+      { file: frames[5].file, duration: 1.5 },
+      { file: terminalWide, duration: 2.5 },
+      { file: end, duration: 2.0 },
+    ];
     const list = path.join(tmp, "frames.txt");
-    await writeFile(
-      list,
-      concatList([
-        { file: title, duration: 1.5 },
-        { file: frames[0].file, duration: 1.5 },
-        { file: frames[1].file, duration: 1.5 },
-        { file: frames[2].file, duration: 1.5 },
-        { file: frames[3].file, duration: 1.5 },
-        { file: frames[4].file, duration: 1.5 },
-        { file: frames[5].file, duration: 1.5 },
-        { file: terminal, duration: 2.5 },
-        { file: end, duration: 2.0 },
-      ]),
-    );
+    await writeFile(list, concatList(wideEntries));
+
+    const squareEntries = [];
+    for (const item of wideEntries) {
+      if (item.file === terminalWide) {
+        squareEntries.push({ file: terminalSquare, duration: item.duration });
+        continue;
+      }
+      const dest = path.join(tmp, `${path.basename(item.file, ".png")}-1080.png`);
+      await padToSquare(item.file, dest);
+      squareEntries.push({ file: dest, duration: item.duration });
+    }
+    const squareList = path.join(tmp, "frames-1080.txt");
+    await writeFile(squareList, concatList(squareEntries));
 
     const wide = path.join(MEDIA, "launch-ubc.mp4");
     const square = path.join(MEDIA, "launch-ubc-1080.mp4");
@@ -566,11 +741,7 @@ async function main() {
       wide,
       `scale=${W}:${H}:flags=lanczos,pad=${W}:${H + 1}:0:0:color=0xf4f1ea,setsar=1,fps=30`,
     );
-    await encodeMp4(
-      list,
-      square,
-      "scale=1080:1080:force_original_aspect_ratio=decrease,pad=1080:1080:(ow-iw)/2:(oh-ih)/2:color=0xf4f1ea,setsar=1,fps=30",
-    );
+    await encodeMp4(squareList, square, "scale=1080:1080:flags=lanczos,setsar=1,fps=30");
     await encodeGif(wide, gif);
 
     for (const dest of [
