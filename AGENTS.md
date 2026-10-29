@@ -24,12 +24,15 @@ npx playwright install --with-deps chromium
 | `npm test` | Build, preview, Playwright Chromium |
 | `npm run check:pages` | `build:pages`, serve `dist/` at `/ui-break-cases/`, assert gallery + assets + 9 fixtures return 200 |
 | `npm run capture:demo` | Playwright screenshots of broken/fixed fixtures + system `ffmpeg` → `docs/media/broken-vs-fixed.gif` |
+| `npm run capture:launch` | Playwright + `ffmpeg` → `docs/media/launch-ubc*.mp4`, `.gif`, `spec-hit-test.png` |
 
 Tests hit the preview server, not `npm run dev`. If preview is already running on 4173, Playwright reuses it outside CI.
 
 A CI workflow is included (`.github/workflows/ci.yml`); GitHub Actions is currently disabled, so run the checks locally.
 
-`npm run capture:demo` needs a system `ffmpeg` binary. It is not an npm dependency. The GIF is a committed artifact; do not invent or hand-edit frames.
+`npm run capture:demo` and `npm run capture:launch` need a system `ffmpeg` binary. It is not an npm dependency. The GIFs and launch media are committed artifacts; do not invent or hand-edit frames.
+
+`capture:launch` loads TTF files from common system paths (DejaVu, then Liberation, then optional macOS Inter / JetBrains Mono). Override with `UI_BREAK_FONT_SANS_BOLD`, `UI_BREAK_FONT_SANS`, `UI_BREAK_FONT_MONO`, and `UI_BREAK_FONT_MONO_BOLD`. It does not require fonts under `/usr/share/fonts/truetype/macos`.
 
 ## Invariants for this repo
 
