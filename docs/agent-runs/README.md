@@ -25,3 +25,12 @@ node docs/agent-runs/blind/score.mjs path/to/mapping.json path/to/results.json
 ```
 
 The builder is no longer in this repository. Do not commit mapping files.
+
+## Second isolated run (`blind-run-2`)
+
+Only one Cursor Cloud Agent run per set has been done. Claude Code and Codex have not been run.
+
+- **Run:** [Cursor Cloud Agent bc-b16130fc-59e2-5f86-a130-58d71f5d494d](https://cursor.com/agents/bc-b16130fc-59e2-5f86-a130-58d71f5d494d). Results are on orphan branch `blind-run-2` at commit [`2225f8a7c23d377a15a60e25ca8ecef944760cc8`](https://github.com/EstebanIndiveri/ui-break-cases/commit/2225f8a7c23d377a15a60e25ca8ecef944760cc8). It started from `03b68c4`.
+- **Official score:** 9/9, scored by an independent reviewer with `score.mjs` from `9193531` (which parses `specOutput`) against a private mapping that is not in the repo.
+- **Method:** Regenerated set (max 12-gram Jaccard 0.100 against the public fixtures and the previous sets). Isolated by instruction only, no network sandbox. 1 run, 1 model, n=9.
+- **p01:** The agent’s reported doubt on `p01`: it classified `p01` as broken from the text clip (`clippedBottom` 68px with overflow hidden and no expand control), not from a box overlap. The 24px box itself does not overlap `#rest`.
