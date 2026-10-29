@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Glasshouse board</title>
+<style>
+body{margin:0;background:#fefce8;color:#365314;font-family:Garamond,Baskerville,"Times New Roman",serif}
+.board{margin:20px;padding:16px 18px 22px;background:#ecfccb;border-left:8px solid #65a30d}
+.col{display:flex;flex-direction:column;gap:10px}
+#rest{order:3;margin:0;font-size:13px;color:#4d7c0f}
+blockquote{order:1;margin:0;padding:0;border:0}
+#warning{margin:0;font-size:16px;line-height:24px;}
+#widen{order:2}
+#warning.folded{height:24px;overflow:hidden}
+#widen{margin:0;padding:7px 12px;border:0;background:#bef264;color:#1a2e05;font:600 13px Garamond,serif}
+</style>
+</head>
+<body>
+<main class="board">
+<div class="col">
+<p id="rest">Next watering is 05:10 at bed C. Leave the cloches on until the frost cloth is pulled.</p>
+<button id="widen" type="button" aria-expanded="false">Show the rest</button>
+<blockquote>
+<p id="warning" class="folded">Frost advisory: cover the late tomatoes, the citrus tubs, and the grafted pear before 02:00 because the valley floor drops below freezing and the river fog will linger until sunrise</p>
+</blockquote>
+</div>
+</main>
+<script>
+const note = document.getElementById("warning");
+const widen = document.getElementById("widen");
+widen.addEventListener("click", () => {
+  const open = widen.getAttribute("aria-expanded") === "true";
+  widen.setAttribute("aria-expanded", open ? "false" : "true");
+  note.classList.toggle("folded", open);
+});
+</script>
+</body>
+</html>

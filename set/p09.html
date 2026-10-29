@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Jetty log</title>
+<style>
+html{background:#041f1e}
+body{margin:0;background:#042f2e;color:#ccfbf1;font-family:Tahoma,Geneva,sans-serif}
+.shell{padding:22px 18px 40px}
+.tag{margin:0 0 14px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#5eead4}
+.bay{background:#134e4a;padding:16px 14px;border:3px solid #2dd4bf}
+#rack{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:8px;width:232px;box-sizing:border-box;padding:12px 10px;background:#115e59;border-radius:0}
+#cue{order:2;flex:0 0 auto;margin:0;padding:9px 11px;background:#f59e0b;color:#111827;font:700 11px/1 Tahoma,sans-serif;border:0;white-space:nowrap}
+.stack{order:1;flex:1 1 auto;min-width:0;}
+#callsign{display:block;margin:0;font:12px/1.4 "Lucida Console",Monaco,monospace;color:#99f6e4;overflow-wrap:anywhere;}
+#cue-ack{display:none}
+#cue-ack.is-on{display:block;margin:12px 0 0;font-size:12px}
+</style>
+</head>
+<body>
+<div class="shell">
+<p class="tag">Harbor net · ch 16</p>
+<section class="bay">
+<div id="rack">
+<button id="cue" type="button">Queue</button>
+<div class="stack">
+<code id="callsign">HAM/7.074-usb/net=north-jetty-unbroken-callsign-token-XR9-7741</code>
+</div>
+</div>
+<em id="cue-ack">Queued</em>
+</section>
+</div>
+<script>
+document.getElementById("cue").addEventListener("click", (event) => {
+  event.preventDefault();
+  document.getElementById("cue-ack").classList.add("is-on");
+});
+</script>
+</body>
+</html>

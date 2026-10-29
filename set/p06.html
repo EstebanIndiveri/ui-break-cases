@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Night ferry</title>
+<style>
+body{margin:0;background:#e0f2fe;color:#0c4a6e;font-family:"Lucida Sans Unicode","Lucida Grande",sans-serif}
+#plank{position:fixed;left:0;right:0;bottom:0;height:68px;display:flex;align-items:center;justify-content:center;background:#082f49;color:#bae6fd;font-size:13px}
+.sheet{box-sizing:border-box;min-height:100vh;display:flex;flex-direction:column;padding:20px 16px 28px;}
+.sheet h1{margin:0 0 10px;font-size:21px}
+.blurb{margin:0 0 9px;line-height:1.45}
+.actions{margin-top:auto}
+#board{display:block;width:100%;box-sizing:border-box;min-height:44px;border:0;background:#ea580c;color:#fff7ed;font:700 15px/1.2 inherit}
+.pad{height:68px;width:100%;background:#bae6fd}
+#ticket-ack{display:none}
+#ticket-ack.is-on{display:block}
+</style>
+</head>
+<body>
+<nav id="plank">Slip 12 · last call 21:40</nav>
+<div class="sheet">
+<h1>Outer-island night ferry</h1>
+<p class="blurb">Walk-on only. Bicycles in the bow cage. Dogs stay on the lower deck until the horn.</p>
+<p class="blurb">Fog is sitting on the channel. Bring a torch for the unlit pier on the far side.</p>
+<p class="blurb">If you miss this sailing the next hull is Thursday and the ticket does not roll.</p>
+<div class="actions"><button id="board" type="button">Take the slip</button></div>
+<p id="ticket-ack">Slip taken</p>
+
+</div>
+<script>
+document.getElementById("board").addEventListener("click", () => {
+  document.getElementById("ticket-ack").classList.add("is-on");
+});
+</script>
+</body>
+</html>
