@@ -7,6 +7,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6)](https://www.typescriptlang.org/)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
+**[Live demo →](https://estebanindiveri.github.io/ui-break-cases/)** · [Cases](#cases) · [Quickstart](#quickstart) · [Propose a case](#propose-a-case)
+
 Reproducible UI bugs, explained fixes, and tests you can reuse.
 
 A small collection of real-world CSS layout failures — a long URL overflowing a flex row (`min-width: auto`), text clipped by a fixed-height container (`overflow: hidden`), and a fixed footer covering the last button on short mobile screens. Each case ships a **broken** page, a **fixed** page that keeps the content and the action, a **control** page that looks similar but is valid by design, and a **Playwright test** you can copy and point at your own component.
@@ -48,7 +50,7 @@ npm run build
 npm run preview
 ```
 
-`npm run preview` serves `dist/` at [http://127.0.0.1:4173/](http://127.0.0.1:4173/). The Vite `base` is `./`, so asset and fixture URLs stay relative. Vite’s preview server does not remount `public/` files under `/ui-break-cases/`; see [Live demo](#live-demo-coming-soon) for the Pages build.
+`npm run preview` serves `dist/` at [http://127.0.0.1:4173/](http://127.0.0.1:4173/). The Vite `base` is `./`, so asset and fixture URLs stay relative. Vite’s preview server does not remount `public/` files under `/ui-break-cases/`; see [Live demo](#live-demo) for the Pages build.
 
 ## Chromium for Playwright
 
@@ -124,23 +126,20 @@ Limitations:
 - Geometry helpers are fixture-specific.
 - No URL scanner, backend, accounts, LLM, MCP, browser extension, npm publish, or extra cases.
 - Screenshots are evidence, not the assertion.
-- GitHub Pages is not enabled. The live demo URL below is the intended address after a later publish.
 
-## Live demo (coming soon)
+## Live demo
 
-GitHub Pages is not enabled yet.
+**https://estebanindiveri.github.io/ui-break-cases/** — the gallery plus all nine fixtures (broken, fixed and control for each case). Nothing to install.
 
-When it is published later, the gallery is expected at:
+[Releases](https://github.com/EstebanIndiveri/ui-break-cases/releases)
 
-https://estebanindiveri.github.io/ui-break-cases/
-
-To produce that build:
+The site is built from `main` and published on the `gh-pages` branch:
 
 ```bash
 npm run build:pages
 ```
 
-That writes `dist/` with asset URLs under `/ui-break-cases/`. Upload the contents of `dist/` as the GitHub Pages project site. `npm run check:pages` serves the same tree locally and asserts HTTP 200 for the gallery, hashed assets, and all nine fixtures.
+The contents of `dist/` are what the `gh-pages` branch serves. `npm run check:pages` serves the same tree locally and asserts HTTP 200 for the gallery, hashed assets, and all nine fixtures.
 
 ## Contribute
 

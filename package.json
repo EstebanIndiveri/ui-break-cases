@@ -1,6 +1,6 @@
 {
   "name": "ui-break-cases",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Reproducible UI bugs, explained fixes, and tests you can reuse.",
   "type": "module",
@@ -16,6 +16,7 @@
     "test": "playwright test",
     "check:pages": "node scripts/check-pages.mjs",
     "capture:demo": "node scripts/capture-readme-gif.mjs",
+    "capture:launch": "node scripts/capture-launch-media.mjs",
     "screenshots": "playwright test tests/screenshots.spec.ts"
   },
   "repository": {

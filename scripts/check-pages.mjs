@@ -21,6 +21,8 @@ const MIME = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".map": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".xml": "application/xml; charset=utf-8",
 };
 
 function run(command, args) {
@@ -135,6 +137,20 @@ async function main() {
   await run("npm", ["run", "build:pages"]);
 
   const indexHtml = await readFile(path.join(DIST, "index.html"), "utf8");
+  const requiredMeta = [
+    'rel="canonical"',
+    "og:title",
+    "og:image",
+    "twitter:card",
+    "twitter:image",
+    "https://estebanindiveri.github.io/ui-break-cases/social-preview.png",
+  ];
+  for (const needle of requiredMeta) {
+    if (!indexHtml.includes(needle)) {
+      throw new Error(`dist/index.html is missing ${needle}`);
+    }
+  }
+
   const assetPaths = [
     ...indexHtml.matchAll(/(?:src|href)="(\/ui-break-cases\/assets\/[^"]+)"/g),
   ].map((match) => match[1].slice(PREFIX.length));
@@ -150,7 +166,14 @@ async function main() {
   const server = await startServer();
   const failures = [];
   try {
-    const checks = ["/", "/index.html", ...assetPaths, ...fixtures];
+    const checks = [
+      "/",
+      "/index.html",
+      "/social-preview.png",
+      "/sitemap.xml",
+      ...assetPaths,
+      ...fixtures,
+    ];
     for (const pathname of checks) {
       const result = await get(pathname);
       const label = result.url;
