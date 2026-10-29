@@ -7,6 +7,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6)](https://www.typescriptlang.org/)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
+**[Live demo →](https://estebanindiveri.github.io/ui-break-cases/)** · [Cases](#cases) · [Quickstart](#quickstart) · [Propose a case](#propose-a-case)
+
 Reproducible UI bugs, explained fixes, and tests you can reuse.
 
 A small collection of real-world CSS layout failures — a long URL overflowing a flex row (`min-width: auto`), text clipped by a fixed-height container (`overflow: hidden`), and a fixed footer covering the last button on short mobile screens. Each case ships a **broken** page, a **fixed** page that keeps the content and the action, a **control** page that looks similar but is valid by design, and a **Playwright test** you can copy and point at your own component.
@@ -14,8 +16,6 @@ A small collection of real-world CSS layout failures — a long URL overflowing 
 It is for people who write UI tests or CSS and want a concrete example to copy. It is not a scanner, a benchmark, or a claim that these are the only bugs that matter.
 
 ![Side-by-side comparison of the three fixtures. Left column broken, right column fixed, with capture-only red outlines: a long URL overflowing a flex card while Copy stays on screen; a status sentence clipped to one line; Confirm booking covered by a fixed footer.](docs/media/broken-vs-fixed.gif)
-
-**Live demo:** [estebanindiveri.github.io/ui-break-cases](https://estebanindiveri.github.io/ui-break-cases/) · **Releases:** [github.com/EstebanIndiveri/ui-break-cases/releases](https://github.com/EstebanIndiveri/ui-break-cases/releases)
 
 ## Quickstart
 
@@ -129,19 +129,17 @@ Limitations:
 
 ## Live demo
 
-The gallery is published at:
+**https://estebanindiveri.github.io/ui-break-cases/** — the gallery plus all nine fixtures (broken, fixed and control for each case). Nothing to install.
 
-https://estebanindiveri.github.io/ui-break-cases/
+[Releases](https://github.com/EstebanIndiveri/ui-break-cases/releases)
 
-Tagged snapshots are on the [releases](https://github.com/EstebanIndiveri/ui-break-cases/releases) page.
-
-To produce that build:
+The site is built from `main` and published on the `gh-pages` branch:
 
 ```bash
 npm run build:pages
 ```
 
-That writes `dist/` with asset URLs under `/ui-break-cases/`. The GitHub Pages project site serves the `gh-pages` branch from that tree. `npm run check:pages` serves the same tree locally and asserts HTTP 200 for the gallery, hashed assets, and all nine fixtures.
+The contents of `dist/` are what the `gh-pages` branch serves. `npm run check:pages` serves the same tree locally and asserts HTTP 200 for the gallery, hashed assets, and all nine fixtures.
 
 ## Contribute
 
