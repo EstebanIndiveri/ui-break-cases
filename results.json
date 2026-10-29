@@ -1,0 +1,101 @@
+{
+  "p01.html": {
+    "matches": [
+      {
+        "caseId": "fixed-footer-overlap",
+        "resembles": "fixed",
+        "bug": false,
+        "fix": null,
+        "notes": "After scroll-to-end: #last-action {top:368,bottom:412} vs fixed #site-footer {top:428,bottom:500,height:72}. overlapHeight=0px. elementFromPoint(action center) => last-action. main padding-bottom 88px reserves space. No painted spacer."
+      }
+    ]
+  },
+  "p02.html": {
+    "matches": [
+      {
+        "caseId": "flex-long-text",
+        "resembles": "broken",
+        "bug": true,
+        "fix": ".body { min-width: 0; } #long-text { overflow-wrap: anywhere; }",
+        "notes": "Flex #card width 252px (left 16, right 268). #long-text right 306.02 overflows card by 38.02px. #action right 385.03 overflows card by 117.03px (> CLEAR_DEFECT_PX 16). isClearFlexOverflow true. overflow-x visible (not a local-scroll control). documentHorizontalOverflow 0px. Hit-test at action center still hits #action."
+      }
+    ]
+  },
+  "p03.html": {
+    "matches": [
+      {
+        "caseId": "flex-long-text",
+        "resembles": "control",
+        "bug": false,
+        "fix": null,
+        "notes": "#code-block computed overflow-x auto, scrollWidth 298 > clientWidth 220, local horizontal scroll. documentHorizontalOverflow 0px (<= 4px). Page does not grow sideways."
+      }
+    ]
+  },
+  "p04.html": {
+    "matches": [
+      {
+        "caseId": "fixed-height-label",
+        "resembles": "broken",
+        "bug": true,
+        "fix": "#label { height: auto; overflow: visible; }",
+        "notes": "#label overflow hidden, box height 24px. Range.getClientRects() clippedBottom 47px (> 16), clippedRight 0. Three text rects to y=140 vs box bottom 93. No painted expand control (no #expand-toggle). #next-content top 109 is below the clipped box (bottom 93) but would collide with unclipped text."
+      }
+    ]
+  },
+  "p05.html": {
+    "matches": [
+      {
+        "caseId": "fixed-height-label",
+        "resembles": "fixed",
+        "bug": false,
+        "fix": null,
+        "notes": "#label overflow visible, box height 72px. clippedBottom 0, clippedRight 0. #next-content top 157 >= label bottom 141. No expand control needed."
+      }
+    ]
+  },
+  "p06.html": {
+    "matches": [
+      {
+        "caseId": "fixed-footer-overlap",
+        "resembles": "control",
+        "bug": false,
+        "fix": null,
+        "notes": "Fixed #site-footer height 72px. Painted .spacer height 72px matches the bar. After scroll-to-end: #last-action {top:368,bottom:412}, footer top 428, overlapHeight=0px. elementFromPoint => last-action."
+      }
+    ]
+  },
+  "p07.html": {
+    "matches": [
+      {
+        "caseId": "flex-long-text",
+        "resembles": "fixed",
+        "bug": false,
+        "fix": null,
+        "notes": "Token wraps (overflow-wrap:anywhere). #long-text {left:33,right:172} and #action {left:184,right:251} both inside #card {left:16,right:268}. overflow 0px. Hit-test => #action."
+      }
+    ]
+  },
+  "p08.html": {
+    "matches": [
+      {
+        "caseId": "fixed-height-label",
+        "resembles": "control",
+        "bug": false,
+        "fix": null,
+        "notes": "#label is-collapsed: overflow hidden, clippedBottom 47px, but #expand-toggle is painted (width 179.3, height 40, display inline-block) with aria-expanded=false. Intentional clip plus expand control."
+      }
+    ]
+  },
+  "p09.html": {
+    "matches": [
+      {
+        "caseId": "fixed-footer-overlap",
+        "resembles": "broken",
+        "bug": true,
+        "fix": "main { padding-bottom: 88px; }",
+        "notes": "After scroll-to-end: #last-action {top:416,bottom:460} overlaps fixed #site-footer {top:428,bottom:500,height:72} by 32px (> 16). elementFromPoint(action center) => site-footer, not last-action. main padding-bottom 40px is less than footer height. No spacer."
+      }
+    ]
+  }
+}
