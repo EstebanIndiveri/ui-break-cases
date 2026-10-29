@@ -1,0 +1,110 @@
+{
+  "p01.html": {
+    "matches": [
+      {
+        "caseId": "fixed-height-label",
+        "resembles": "broken",
+        "bug": true,
+        "fix": "#warning { height: auto; overflow: visible; }",
+        "specOutput": "\nRunning 1 test using 1 worker\n\n(node:3830) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✘  1 [chromium] › generated/templates/p01-fixed-height-label.spec.ts:30:1 › fixed-height-label healthy: full sentence paints and the next block is clear (134ms)\n\n\n  1) [chromium] › generated/templates/p01-fixed-height-label.spec.ts:30:1 › fixed-height-label healthy: full sentence paints and the next block is clear \n\n    Error: expect(received).toBe(expected) // Object.is equality\n\n    Expected: false\n    Received: true\n\n      41 |\n      42 |   const clip = await textRangeClip(page, TARGET.selectors.label);\n    > 43 |   expect(overflowIsHidden(clip)).toBe(false);\n         |                                  ^\n      44 |   // 4px slack — GEOM_TOLERANCE_PX\n      45 |   expect(clip.clippedBottom).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);\n      46 |   expect(clip.clippedRight).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);\n        at /workspace/generated/templates/p01-fixed-height-label.spec.ts:43:34\n\n    Error Context: test-results/generated-templates-p01-fi-c2959-and-the-next-block-is-clear-chromium/error-context.md\n\n  1 failed\n    [chromium] › generated/templates/p01-fixed-height-label.spec.ts:30:1 › fixed-height-label healthy: full sentence paints and the next block is clear \n",
+        "notes": "#warning is 24px tall with overflow:hidden; Range.getClientRects clippedBottom=68px (>16). No painted aria-expanded control. Text rects extend to y=128 through #rest (top=70); the 24px box itself ends at y=60."
+      }
+    ]
+  },
+  "p02.html": {
+    "matches": [
+      {
+        "caseId": "fixed-footer-overlap",
+        "resembles": "control",
+        "bug": false,
+        "fix": null,
+        "specOutput": null,
+        "notes": "Fixed #plank is 68px at the bottom. Painted .pad spacer height=68px matches the bar. After scroll-to-end, #board bottom=412, footer top=432, overlap=0. elementFromPoint at the button center hits #board."
+      }
+    ]
+  },
+  "p03.html": {
+    "matches": [
+      {
+        "caseId": "fixed-height-label",
+        "resembles": "fixed",
+        "bug": false,
+        "fix": null,
+        "specOutput": null,
+        "notes": "#warning overflow=visible, height=96px. clippedBottom=0, clippedRight=0. #rest top=142 is below warning bottom=132 (gap 10px)."
+      }
+    ]
+  },
+  "p04.html": {
+    "matches": [
+      {
+        "caseId": "flex-long-text",
+        "resembles": "control",
+        "bug": false,
+        "fix": null,
+        "specOutput": null,
+        "notes": "#tape computed overflow-x=auto, scrollWidth=466 > clientWidth=176. Document overflow-x=0. Local ticker scroll; the page does not grow sideways."
+      }
+    ]
+  },
+  "p05.html": {
+    "matches": [
+      {
+        "caseId": "fixed-height-label",
+        "resembles": "control",
+        "bug": false,
+        "fix": null,
+        "specOutput": null,
+        "notes": "#warning clippedBottom=68px with overflow:hidden, but painted #widen button (306x30) has aria-expanded=false. Intentional clip plus expand control."
+      }
+    ]
+  },
+  "p06.html": {
+    "matches": [
+      {
+        "caseId": "fixed-footer-overlap",
+        "resembles": "broken",
+        "bug": true,
+        "fix": ".sheet { padding-bottom: 104px; } /* reserve space >= the 68px fixed #plank */",
+        "specOutput": "\nRunning 1 test using 1 worker\n\n(node:3623) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✘  1 [chromium] › generated/templates/p06-fixed-footer-overlap.spec.ts:43:1 › fixed-footer-overlap healthy: last action stays above the footer and is hittable (205ms)\n\n\n  1) [chromium] › generated/templates/p06-fixed-footer-overlap.spec.ts:43:1 › fixed-footer-overlap healthy: last action stays above the footer and is hittable \n\n    Error: expect(received).toBeLessThanOrEqual(expected)\n\n    Expected: <= 4\n    Received:    40\n\n      63 |   expect(position).toBe(\"fixed\");\n      64 |   // 4px slack — GEOM_TOLERANCE_PX\n    > 65 |   expect(overlapHeight(action, footer)).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);\n         |                                         ^\n      66 |   expect(action.bottom).toBeLessThanOrEqual(footer.top + GEOM_TOLERANCE_PX);\n      67 |   expectInViewport(action, TARGET.viewport);\n      68 |   expect(hit.hit?.id).toBe(actionId());\n        at /workspace/generated/templates/p06-fixed-footer-overlap.spec.ts:65:41\n\n    Error Context: test-results/generated-templates-p06-fi-c8400--the-footer-and-is-hittable-chromium/error-context.md\n\n  1 failed\n    [chromium] › generated/templates/p06-fixed-footer-overlap.spec.ts:43:1 › fixed-footer-overlap healthy: last action stays above the footer and is hittable \n",
+        "notes": "Fixed #plank 68px. No matching spacer. After scroll-to-end, #board (top=428,bottom=472) overlaps footer (top=432) by 40px (>16). elementFromPoint(180,450) hits #plank, not #board. .sheet padding-bottom is only 28px."
+      }
+    ]
+  },
+  "p07.html": {
+    "matches": [
+      {
+        "caseId": "flex-long-text",
+        "resembles": "broken",
+        "bug": true,
+        "fix": ".stack { min-width: 0; } #callsign { overflow-wrap: anywhere; white-space: normal; }",
+        "specOutput": "\nRunning 1 test using 1 worker\n\n(node:3624) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✘  1 [chromium] › generated/templates/p07-flex-long-text.spec.ts:38:1 › flex-long-text healthy: token stays in the card and the action is hittable (183ms)\n\n\n  1) [chromium] › generated/templates/p07-flex-long-text.spec.ts:38:1 › flex-long-text healthy: token stays in the card and the action is hittable \n\n    Error: expect(received).toBeLessThanOrEqual(expected)\n\n    Expected: <= 271\n    Received:    491.40625\n\n       at generated/lib/geometry.ts:244\n\n      242 | ): void {\n      243 |   expect(inner.left).toBeGreaterThanOrEqual(outer.left - tolerance);\n    > 244 |   expect(inner.right).toBeLessThanOrEqual(outer.right + tolerance);\n          |                       ^\n      245 |   expect(inner.top).toBeGreaterThanOrEqual(outer.top - tolerance);\n      246 |   expect(inner.bottom).toBeLessThanOrEqual(outer.bottom + tolerance);\n      247 | }\n        at expectInside (/workspace/generated/lib/geometry.ts:244:23)\n        at /workspace/generated/templates/p07-flex-long-text.spec.ts:55:3\n\n    Error Context: test-results/generated-templates-p07-fl-9fd5a--and-the-action-is-hittable-chromium/error-context.md\n\n  1 failed\n    [chromium] › generated/templates/p07-flex-long-text.spec.ts:38:1 › flex-long-text healthy: token stays in the card and the action is hittable \n",
+        "notes": "Flex row #rack width=232. #callsign nowrap right=491.41 vs card right=267, overflowPx=224.41. #cue right=555.64 is outside the card and viewport (390). isClearFlexOverflow true. document overflow-x=166. elementFromPoint at the action center returns null."
+      }
+    ]
+  },
+  "p08.html": {
+    "matches": [
+      {
+        "caseId": "fixed-footer-overlap",
+        "resembles": "fixed",
+        "bug": false,
+        "fix": null,
+        "specOutput": null,
+        "notes": "Fixed #plank 68px. .sheet padding-bottom=104px reserves space. After scroll-to-end, #board bottom=396, footer top=432, overlap=0. elementFromPoint hits #board."
+      }
+    ]
+  },
+  "p09.html": {
+    "matches": [
+      {
+        "caseId": "flex-long-text",
+        "resembles": "fixed",
+        "bug": false,
+        "fix": null,
+        "specOutput": null,
+        "notes": "#callsign overflow-wrap=anywhere wraps inside #rack. text right=192.77, action right=257, card right=267. overflowPx=0. elementFromPoint hits #cue. document overflow-x=0."
+      }
+    ]
+  }
+}
