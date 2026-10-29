@@ -2,15 +2,15 @@
   {
     "file": "p01.html",
     "viewport": {
-      "width": 390,
-      "height": 640
+      "width": 360,
+      "height": 500
     }
   },
   {
     "file": "p02.html",
     "viewport": {
-      "width": 360,
-      "height": 500
+      "width": 390,
+      "height": 640
     }
   },
   {
@@ -23,8 +23,8 @@
   {
     "file": "p04.html",
     "viewport": {
-      "width": 360,
-      "height": 500
+      "width": 390,
+      "height": 640
     }
   },
   {
@@ -37,15 +37,15 @@
   {
     "file": "p06.html",
     "viewport": {
-      "width": 390,
-      "height": 640
+      "width": 360,
+      "height": 500
     }
   },
   {
     "file": "p07.html",
     "viewport": {
-      "width": 360,
-      "height": 500
+      "width": 390,
+      "height": 640
     }
   },
   {
@@ -58,8 +58,8 @@
   {
     "file": "p09.html",
     "viewport": {
-      "width": 390,
-      "height": 640
+      "width": 360,
+      "height": 500
     }
   }
 ]

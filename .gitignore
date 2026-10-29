@@ -8,3 +8,7 @@ artifacts
 .DS_Store
 *.log
 .vite
+
+# Blind eval answers. Builder writes /tmp/ubc-blind-mapping.json; never commit a mapping.
+ubc-blind-mapping.json
+docs/agent-runs/blind/mapping.json

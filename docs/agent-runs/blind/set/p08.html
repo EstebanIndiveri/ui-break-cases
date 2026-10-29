@@ -17,64 +17,70 @@
 main {
         padding: 16px;
       }
-      #card {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        width: 252px;
-        box-sizing: border-box;
-        padding: 16px;
+      .card {
         background: #fff;
         border: 1px solid #d6d3d1;
         border-radius: 12px;
+        padding: 16px;
       }
-      .body {
-        flex: 1 1 auto;
-        min-width: 0;
+      h1 {
+        margin: 0 0 12px;
+        font-size: 18px;
       }
-      .kicker {
-        margin: 0 0 6px;
-        font-size: 12px;
-        color: #57534e;
-      }
-      #long-text {
+      #label {
         margin: 0;
-        font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-        font-size: 13px;
-        line-height: 1.4;
-        overflow-wrap: anywhere;
+        font-size: 16px;
+        line-height: 24px;
       }
-      #action {
-        flex: 0 0 auto;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+      #label.is-collapsed {
+        height: 24px;
+        overflow: hidden;
+      }
+      #expand-toggle {
+        margin-top: 10px;
         min-height: 40px;
-        padding: 8px 14px;
+        padding: 8px 12px;
+        border: 1px solid #1d4ed8;
         border-radius: 8px;
-        background: #1d4ed8;
-        color: #fff;
-        text-decoration: none;
+        background: #eff6ff;
+        color: #1e3a8a;
+        font: inherit;
         font-weight: 600;
-        white-space: nowrap;
+        cursor: pointer;
+      }
+      #expand-toggle:focus-visible {
+        outline: 3px solid #1d4ed8;
+        outline-offset: 2px;
+      }
+      #next-content {
+        margin: 16px 0 0;
+        padding-top: 12px;
+        border-top: 1px solid #e7e5e4;
+        color: #44403c;
+        font-size: 14px;
       }
     </style>
   </head>
   <body>
     <main>
-      <article id="card">
-        <div class="body" id="text-column">
-          <p class="kicker">Webhook target</p>
-          <p id="long-text">https://api.example.test/evt_9f3c2a</p>
-        </div>
-        <a id="action" href="#copy">Copy</a>
-      </article>
-      <p id="action-status" hidden>Copied</p>
+      <section class="card">
+        <h1>Shipment status</h1>
+        <p id="label" class="is-collapsed">Delayed at the distribution hub because the outbound scan failed validation for carton NW-4418</p>
+        <button id="expand-toggle" type="button" aria-expanded="false">
+          Show full summary
+        </button>
+        <p id="next-content">Next checkpoint: customer pickup window 16:00–18:00</p>
+      </section>
     </main>
     <script>
-      document.getElementById("action").addEventListener("click", (event) => {
-        event.preventDefault();
-        document.getElementById("action-status").hidden = false;
+      const label = document.getElementById("label");
+      const toggle = document.getElementById("expand-toggle");
+      toggle.addEventListener("click", () => {
+        const expanded = toggle.getAttribute("aria-expanded") === "true";
+        const nextExpanded = !expanded;
+        toggle.setAttribute("aria-expanded", String(nextExpanded));
+        label.classList.toggle("is-collapsed", !nextExpanded);
+        toggle.textContent = nextExpanded ? "Show less" : "Show full summary";
       });
     </script>
   </body>

@@ -1,19 +1,34 @@
 #!/usr/bin/env node
 /**
- * Score a blind agent run against docs/agent-runs/blind/mapping.json.
- * Usage: node docs/agent-runs/blind/score.mjs [results.json]
+ * Score a blind agent run against a mapping file kept outside the repo.
+ * Usage: node docs/agent-runs/blind/score.mjs <mapping.json> [results.json]
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const mappingPath = path.join(ROOT, "docs/agent-runs/blind/mapping.json");
+const mappingPath = process.argv[2];
 const resultsPath = path.resolve(
-  process.argv[2] ?? path.join(ROOT, "docs/agent-runs/blind/results.json"),
+  process.argv[3] ?? path.join(ROOT, "docs/agent-runs/blind/results.json"),
 );
 
-const mapping = JSON.parse(await readFile(mappingPath, "utf8"));
+if (!mappingPath) {
+  console.error(
+    "Usage: node docs/agent-runs/blind/score.mjs <mapping.json> [results.json]",
+  );
+  process.exit(2);
+}
+
+let mapping;
+try {
+  mapping = JSON.parse(await readFile(path.resolve(mappingPath), "utf8"));
+} catch (error) {
+  console.error(`Cannot read mapping: ${mappingPath}`);
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(2);
+}
+
 let results;
 try {
   results = JSON.parse(await readFile(resultsPath, "utf8"));

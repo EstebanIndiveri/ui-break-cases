@@ -15,76 +15,65 @@
         color: #1c1917;
       }
 main {
-        box-sizing: border-box;
+        padding: 16px;
+      }
+      #card {
         display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-        padding: 16px 16px 88px;
-      }
-      h1 {
-        margin: 0 0 12px;
-        font-size: 20px;
-      }
-      p {
-        margin: 0 0 12px;
-        line-height: 1.5;
-        color: #44403c;
-      }
-      #last-action {
-        display: block;
-        width: 100%;
+        align-items: center;
+        gap: 12px;
+        width: 252px;
         box-sizing: border-box;
-        min-height: 44px;
-        margin-top: auto;
-        padding: 10px 16px;
-        border: 0;
+        padding: 16px;
+        background: #fff;
+        border: 1px solid #d6d3d1;
+        border-radius: 12px;
+      }
+      .body {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .kicker {
+        margin: 0 0 6px;
+        font-size: 12px;
+        color: #57534e;
+      }
+      #long-text {
+        margin: 0;
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+      }
+      #action {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 8px 14px;
         border-radius: 8px;
         background: #1d4ed8;
         color: #fff;
-        font: inherit;
-        font-weight: 700;
-      }
-      #site-footer {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 72px;
-        box-sizing: border-box;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #1c1917;
-        color: #fafaf9;
-        font-size: 14px;
+        text-decoration: none;
+        font-weight: 600;
+        white-space: nowrap;
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>Checkout</h1>
-      <p>
-        Studio desk, Thursday 18:30–19:15. Bring the signed waiver and the
-        locker code emailed this morning.
-      </p>
-      <p>
-        Guests check in at the front desk. Late arrivals after 10 minutes are
-        treated as a missed slot and the hold is released.
-      </p>
-      <p>
-        Parking is in the south lot. Use the pedestrian gate next to the loading
-        dock; the street door stays locked after 18:00.
-      </p>
-      <p>
-        This hold expires if you leave without confirming. The last control sits
-        at the end of the page.
-      </p>
-      <button id="last-action" type="button">Confirm booking</button>
-      <p id="action-status" hidden>Booking confirmed</p>
+      <article id="card">
+        <div class="body" id="text-column">
+          <p class="kicker">Webhook target</p>
+          <p id="long-text">https://api.example.test/evt_9f3c2a</p>
+        </div>
+        <a id="action" href="#copy">Copy</a>
+      </article>
+      <p id="action-status" hidden>Copied</p>
     </main>
-    <footer id="site-footer">Need help? Desk line 555-0142</footer>
     <script>
-      document.getElementById("last-action").addEventListener("click", () => {
+      document.getElementById("action").addEventListener("click", (event) => {
+        event.preventDefault();
         document.getElementById("action-status").hidden = false;
       });
     </script>

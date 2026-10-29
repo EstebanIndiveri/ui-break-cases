@@ -1,6 +1,6 @@
 # Layout review
 
-Review every HTML page listed in `pages.json` in this directory (`docs/agent-runs/blind/set/`).
+Review every HTML page listed in `pages.json` in `set/`.
 
 For each page:
 
@@ -13,9 +13,9 @@ For each page:
 
 Tolerances: 4px slack, 16px defect. Chromium only. Human review required.
 
-Do **not** read `docs/agent-runs/blind/mapping.json`, `docs/agent-runs/blind/score.mjs`, `docs/agent-runs/blind/build-set.mjs`, or `docs/agent-runs/blind/README.md`. Do not infer the answer from filenames. Filenames are random.
+Do not infer the answer from filenames. Filenames are random.
 
-Write JSON to `docs/agent-runs/blind/results.json` with this shape:
+Write JSON to `results.json` with this shape:
 
 ```json
 {

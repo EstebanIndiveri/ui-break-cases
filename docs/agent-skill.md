@@ -62,7 +62,7 @@ The generated test asserts healthy layout, so it **fails on broken** (via `expec
 
 ## What was verified here vs what depends on the agent
 
-A Cursor session against the nine fixtures is recorded in [`docs/agent-runs/`](agent-runs/README.md). That run was not blind. A blind set, prompt, and scorer for a **fresh** agent live in [`docs/agent-runs/blind/`](agent-runs/blind/README.md). Claude Code and Codex were **not** run.
+A Cursor session against the nine fixtures is recorded in [`docs/agent-runs/`](agent-runs/README.md). That run was not blind. A blind prompt and scorer live in [`docs/agent-runs/blind/`](agent-runs/blind/README.md); the pages for a **fresh** agent are on the `blind-run` branch. The mapping is not in the repo. Claude Code and Codex were **not** run.
 
 Local verification is deterministic:
 
