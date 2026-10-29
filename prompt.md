@@ -34,3 +34,4 @@ Write JSON to `results.json` with this shape:
 ```
 
 Use `bug: true` only when `resembles` is `"broken"`.
+Write results.json at the repo root and commit it together with the generated specs on this branch.
