@@ -104,6 +104,7 @@ export function mountGallery(root: HTMLElement): void {
       variant = "broken";
       restoreTabFocus = false;
       render();
+      nav.querySelector<HTMLButtonElement>('[aria-current="true"]')?.focus();
     });
     renderPanel(panel, current, variant, restoreTabFocus, (next) => {
       variant = next;
