@@ -23,6 +23,7 @@ npx playwright install --with-deps chromium
 | `npm run preview` | Serve `dist/` at port 4173 |
 | `npm test` | Build, preview, Playwright Chromium |
 | `npm run check:pages` | `build:pages`, serve `dist/` at `/ui-break-cases/`, assert gallery + assets + 9 fixtures return 200 |
+| `npm run verify:skill` | Classifier + generated templates + control geometry + skill-copy drift |
 | `npm run capture:demo` | Playwright screenshots of broken/fixed fixtures + system `ffmpeg` → `docs/media/broken-vs-fixed.gif` |
 | `npm run capture:launch` | Playwright + `ffmpeg` → `docs/media/launch-ubc*.mp4`, `.gif`, `spec-hit-test.png` |
 
@@ -49,8 +50,9 @@ A CI workflow is included (`.github/workflows/ci.yml`); GitHub Actions is curren
 - Fixtures: `public/fixtures/<id>/`
 - Tests: `tests/<id>.spec.ts`
 - Gallery: `src/gallery.ts`, `src/styles.css`
+- Agent skill: `skill/SKILL.md` (canonical), identical copy at `.agents/skills/ui-break-cases/`, helpers in `skill/lib/geometry.ts`, docs in `docs/agent-skill.md`
 
-New cases: follow `docs/adding-a-case.md`.
+New cases: follow `docs/adding-a-case.md`. If you add a case, update `skill/cases/` and `skill/templates/` too.
 
 ## Decisions (v0.1)
 
@@ -59,3 +61,9 @@ New cases: follow `docs/adding-a-case.md`.
 - `appType` is `mpa` so fixture HTML is not replaced by the gallery `index.html`.
 - Shared copy is duplicated in HTML and in `src/cases.ts` so fixtures stay standalone. Keep them in sync by hand.
 - Tolerance: 4px. Defects are built to exceed 16px.
+
+## Decisions (v0.2)
+
+- The agent skill lives in-repo. `skill/SKILL.md` is the source of truth; Cursor and Codex load the identical copy at `.agents/skills/ui-break-cases/SKILL.md`. Claude Code copies `skill/install/claude.SKILL.md`. There is no second skill under `.cursor/skills` or `.claude/skills` (Cursor would double-load it). It is not published to a marketplace.
+- Generated tests import `skill/lib/geometry.ts` and open `TARGET.url` with `page.goto`. They must not import `../../src` or `../../tests`.
+- `npm run verify:skill` is a deterministic stand-in for the templates and classifier. Recorded Cursor runs live in `docs/agent-runs/`. It does not prove Claude Code or Codex will follow the skill.

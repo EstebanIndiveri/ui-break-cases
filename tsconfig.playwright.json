@@ -14,5 +14,12 @@
     "verbatimModuleSyntax": true,
     "types": ["node"]
   },
-  "include": ["tests", "playwright.config.ts", "src/types.ts", "src/cases.ts"]
+  "include": [
+    "tests",
+    "playwright.config.ts",
+    "playwright.skill.config.ts",
+    "src/types.ts",
+    "src/cases.ts",
+    "skill"
+  ]
 }

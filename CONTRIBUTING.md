@@ -17,6 +17,8 @@ npm ci
 npm run typecheck
 npm run build
 npm test
+npm run verify:skill
+npm run check:skill-copies
 npm run check:pages
 ```
 

@@ -71,3 +71,7 @@ Footer-style cases: scroll to the end, measure, then `elementFromPoint`. Do not 
 ## 6. Capture evidence
 
 Run `npm test` and keep a screenshot of the broken variant next to the fixed one. The suite writes PNG files to `artifacts/screenshots/`.
+
+## 7. Keep the agent skill in sync
+
+If you add a case, also add `skill/cases/<id>.md` and `skill/templates/<id>.spec.ts`. Templates import `skill/lib/geometry.ts` and open `TARGET.url`. After editing `skill/SKILL.md`, copy it to `.agents/skills/ui-break-cases/SKILL.md` and `skill/install/claude.SKILL.md` (`npm run check:skill-copies` must pass).

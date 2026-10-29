@@ -110,13 +110,29 @@ For clipped text, `Range.getClientRects()` plus the container’s box and `overf
 
 Copy the helper that matches your bug from `tests/helpers.ts`. Do not treat those helpers as production detectors.
 
+## Agent skill (Cursor, Claude Code, Codex)
+
+v0.2 ships an in-repo skill so a coding agent can review a page for these three patterns, skip a **control**, propose a fix that matches the **fixed** fixture, and emit a Playwright test.
+
+- Canonical instructions: [`skill/SKILL.md`](skill/SKILL.md) (Cursor/Codex load [`.agents/skills/ui-break-cases/`](.agents/skills/ui-break-cases/))
+- Install per agent, limits, and what was verified locally: [`docs/agent-skill.md`](docs/agent-skill.md)
+- Recorded Cursor run on the nine fixtures: [`docs/agent-runs/`](docs/agent-runs/README.md)
+
+```bash
+npm run verify:skill
+```
+
+That command is a deterministic harness (classifier, generated templates, control geometry, skill-copy drift). A Cursor run against the nine fixtures is recorded under `docs/agent-runs/`. Claude Code and Codex were not run.
+
+Limits, also in the README footer of that doc: **Chromium only**, **these three patterns only**, and **a human must review the agent’s output**.
+
 ## What v0.1 checks
 
 - Three cases, nine variants, all load as standalone HTML.
 - Broken tests pass by asserting the defect. They are not skipped and not marked as expected failures.
 - Fixed tests keep the original copy and check that the control still works.
 - Control tests check the intentional behavior, including the expanded summary.
-- `npm ci`, `npm run typecheck`, `npm run build`, `npm run preview`, `npm test` (Chromium), and `npm run check:pages` are the supported commands.
+- `npm ci`, `npm run typecheck`, `npm run build`, `npm run preview`, `npm test` (Chromium), `npm run verify:skill`, and `npm run check:pages` are the supported commands.
 - The gallery is keyboard-usable and keeps footer iframes at 360×500.
 - A CI workflow is included; GitHub Actions is currently disabled, so run the checks locally.
 
