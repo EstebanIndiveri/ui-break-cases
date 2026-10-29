@@ -5,6 +5,10 @@
  *
  *   node scripts/capture-launch-media.mjs
  *
+ * Fonts: DejaVu / Liberation (common on Linux), then optional macOS Inter /
+ * JetBrains Mono if those files exist. Override with UI_BREAK_FONT_SANS_BOLD,
+ * UI_BREAK_FONT_SANS, UI_BREAK_FONT_MONO, UI_BREAK_FONT_MONO_BOLD.
+ *
  * Writes:
  *   docs/media/launch-ubc.mp4
  *   docs/media/launch-ubc-1080.mp4
@@ -12,7 +16,8 @@
  *   docs/media/spec-hit-test.png
  */
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -22,12 +27,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MEDIA = path.join(ROOT, "docs", "media");
 const W = 1200;
 const H = 675;
+const BAR = 64;
 const BG = "#f4f1ea";
 const INK = "#1c1917";
-const FONT_BOLD = "/usr/share/fonts/truetype/macos/Inter-Bold.ttf";
-const FONT_REGULAR = "/usr/share/fonts/truetype/macos/Inter-Regular.ttf";
-const FONT_MONO = "/usr/share/fonts/truetype/macos/JetBrainsMono-Regular.ttf";
-const FONT_MONO_BOLD = "/usr/share/fonts/truetype/macos/JetBrainsMono-Bold.ttf";
+const OUTLINE_BROKEN = "#ef4444";
+const OUTLINE_FIXED = "#16a34a";
 
 const CASES = [
   {
@@ -55,6 +59,63 @@ const CASES = [
     fixedCaption: "padding-bottom reserves the footer",
   },
 ];
+
+function fontCandidates(envKey, fallbacks) {
+  return [process.env[envKey], ...fallbacks].filter(Boolean);
+}
+
+const FONT_CANDIDATES = {
+  sansBold: fontCandidates("UI_BREAK_FONT_SANS_BOLD", [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/truetype/macos/Inter-Bold.ttf",
+  ]),
+  sans: fontCandidates("UI_BREAK_FONT_SANS", [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    "/usr/share/fonts/truetype/macos/Inter-Regular.ttf",
+  ]),
+  mono: fontCandidates("UI_BREAK_FONT_MONO", [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+    "/usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Regular.ttf",
+    "/usr/share/fonts/truetype/macos/JetBrainsMono-Regular.ttf",
+  ]),
+  monoBold: fontCandidates("UI_BREAK_FONT_MONO_BOLD", [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf",
+    "/usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Bold.ttf",
+    "/usr/share/fonts/truetype/macos/JetBrainsMono-Bold.ttf",
+  ]),
+};
+
+async function firstReadable(paths, label) {
+  for (const file of paths) {
+    try {
+      await access(file, constants.R_OK);
+      return file;
+    } catch {
+      // try the next candidate
+    }
+  }
+  throw new Error(
+    `No ${label} font found. Tried:\n${paths.join("\n")}\nSet UI_BREAK_FONT_* to TTF paths.`,
+  );
+}
+
+async function resolveFonts() {
+  const fonts = {
+    sansBold: await firstReadable(FONT_CANDIDATES.sansBold, "sans bold"),
+    sans: await firstReadable(FONT_CANDIDATES.sans, "sans"),
+    mono: await firstReadable(FONT_CANDIDATES.mono, "mono"),
+    monoBold: await firstReadable(FONT_CANDIDATES.monoBold, "mono bold"),
+  };
+  console.log("Fonts:");
+  for (const [key, file] of Object.entries(fonts)) {
+    console.log(`  ${key}: ${file}`);
+  }
+  return fonts;
+}
 
 function run(command, args, opts = {}) {
   return new Promise((resolve, reject) => {
@@ -92,10 +153,10 @@ function runCapture(command, args, opts = {}) {
   });
 }
 
-async function injectOverlay(page, item, labelText, caption) {
+async function injectOutline(page, selector, color) {
   await page.evaluate(
-    ({ selector, label, clip, captionText }) => {
-      const target = document.querySelector(selector);
+    ({ sel, outlineColor }) => {
+      const target = document.querySelector(sel);
       if (!(target instanceof HTMLElement)) {
         return;
       }
@@ -107,55 +168,14 @@ async function injectOverlay(page, item, labelText, caption) {
         `top:${rect.top}px`,
         `width:${rect.width}px`,
         `height:${rect.height}px`,
-        "border:3px solid #ef4444",
+        `border:3px solid ${outlineColor}`,
         "box-sizing:border-box",
         "pointer-events:none",
         "z-index:2147483646",
       ].join(";");
       document.documentElement.append(outline);
-
-      const badge = document.createElement("div");
-      badge.textContent = label;
-      badge.style.cssText = [
-        "position:fixed",
-        `left:${clip.x + 8}px`,
-        `top:${clip.y + 8}px`,
-        "padding:8px 12px",
-        "background:#111827",
-        "color:#fff",
-        "font:700 22px/1 system-ui, sans-serif",
-        "letter-spacing:0.06em",
-        "border-radius:8px",
-        "pointer-events:none",
-        "z-index:2147483647",
-      ].join(";");
-      document.documentElement.append(badge);
-
-      if (captionText) {
-        const cap = document.createElement("div");
-        cap.textContent = captionText;
-        cap.style.cssText = [
-          "position:fixed",
-          `left:${clip.x + 8}px`,
-          `top:${clip.y + 44}px`,
-          "padding:6px 10px",
-          "background:#047857",
-          "color:#ecfdf3",
-          "font:600 14px/1.3 ui-monospace, monospace",
-          "border-radius:6px",
-          "pointer-events:none",
-          "z-index:2147483647",
-          "max-width:340px",
-        ].join(";");
-        document.documentElement.append(cap);
-      }
     },
-    {
-      selector: item.outline,
-      label: labelText,
-      clip: item.clip,
-      captionText: caption ?? "",
-    },
+    { sel: selector, outlineColor: color },
   );
 }
 
@@ -172,9 +192,8 @@ async function captureVariant(page, item, variant, dest) {
       window.scrollTo({ top, left: 0, behavior: "instant" });
     });
   }
-  const label = variant === "broken" ? "BROKEN" : "FIXED";
-  const caption = variant === "fixed" ? item.fixedCaption : "";
-  await injectOverlay(page, item, label, caption);
+  const color = variant === "fixed" ? OUTLINE_FIXED : OUTLINE_BROKEN;
+  await injectOutline(page, item.outline, color);
   await page.screenshot({ path: dest, clip: item.clip });
 }
 
@@ -187,7 +206,7 @@ async function screenshotHtml(page, htmlPath, dest, width, height) {
   });
 }
 
-async function writeCard(page, tmp, name, title, subtitle) {
+async function writeCard(page, tmp, name, title, subtitle, fonts) {
   const html = path.join(tmp, `${name}.html`);
   await writeFile(
     html,
@@ -196,8 +215,8 @@ async function writeCard(page, tmp, name, title, subtitle) {
   <head>
     <meta charset="utf-8" />
     <style>
-      @font-face { font-family: InterB; src: url("file://${FONT_BOLD}"); font-weight: 700; }
-      @font-face { font-family: InterR; src: url("file://${FONT_REGULAR}"); font-weight: 400; }
+      @font-face { font-family: InterB; src: url("${pathToFileURL(fonts.sansBold).href}"); font-weight: 700; }
+      @font-face { font-family: InterR; src: url("${pathToFileURL(fonts.sans).href}"); font-weight: 400; }
       html, body {
         margin: 0; width: ${W}px; height: ${H}px;
         background: ${BG}; color: ${INK};
@@ -230,21 +249,60 @@ async function writeCard(page, tmp, name, title, subtitle) {
   return dest;
 }
 
-async function padToFrame(src, dest) {
-  await run("ffmpeg", [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-y",
-    "-i",
-    src,
-    "-vf",
-    `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=0xf4f1ea`,
-    dest,
-  ]);
+async function composeFixtureFrame(page, tmp, rawPng, variant, caption, fonts) {
+  const html = path.join(tmp, `${path.basename(rawPng, ".png")}-frame.html`);
+  const broken = variant === "broken";
+  const barBg = broken ? "#7f1d1d" : "#14532d";
+  const barFg = broken ? "#fff7ed" : "#ecfdf3";
+  const label = broken ? "BROKEN" : "FIXED";
+  const cap = !broken && caption ? ` · ${caption}` : "";
+  await writeFile(
+    html,
+    `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face { font-family: InterB; src: url("${pathToFileURL(fonts.sansBold).href}"); font-weight: 700; }
+      @font-face { font-family: Mono; src: url("${pathToFileURL(fonts.mono).href}"); }
+      html, body { margin: 0; width: ${W}px; height: ${H}px; background: ${BG}; }
+      .frame {
+        width: ${W}px; height: ${H}px; display: flex; flex-direction: column;
+      }
+      .bar {
+        height: ${BAR}px; box-sizing: border-box;
+        padding: 0 24px; display: flex; align-items: center;
+        background: ${barBg}; color: ${barFg};
+        font: 700 22px/1.2 InterB, system-ui, sans-serif;
+        letter-spacing: 0.04em;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .bar span { font: 600 16px/1.3 Mono, ui-monospace, monospace; letter-spacing: 0; opacity: 0.95; }
+      .stage {
+        flex: 1; display: flex; align-items: center; justify-content: center;
+        padding: 16px 24px 24px;
+      }
+      img {
+        height: ${H - BAR - 48}px;
+        width: auto;
+        max-width: 1100px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <div class="bar">${label}<span>${cap}</span></div>
+      <div class="stage"><img alt="" src="${pathToFileURL(rawPng).href}" /></div>
+    </div>
+  </body>
+</html>`,
+  );
+  const dest = path.join(tmp, `${path.basename(rawPng, ".png")}-frame.png`);
+  await screenshotHtml(page, html, dest, W, H);
+  return dest;
 }
 
-async function writeTerminalFrame(page, tmp, transcript) {
+async function writeTerminalFrame(page, tmp, transcript, fonts) {
   const escaped = transcript
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -257,8 +315,8 @@ async function writeTerminalFrame(page, tmp, transcript) {
   <head>
     <meta charset="utf-8" />
     <style>
-      @font-face { font-family: Mono; src: url("file://${FONT_MONO}"); }
-      @font-face { font-family: MonoB; src: url("file://${FONT_MONO_BOLD}"); font-weight: 700; }
+      @font-face { font-family: Mono; src: url("${pathToFileURL(fonts.mono).href}"); }
+      @font-face { font-family: MonoB; src: url("${pathToFileURL(fonts.monoBold).href}"); font-weight: 700; }
       html, body { margin: 0; width: ${W}px; height: ${H}px; background: #111827; color: #e5e7eb; }
       .bar {
         height: 36px; background: #1f2937; color: #9ca3af;
@@ -267,9 +325,11 @@ async function writeTerminalFrame(page, tmp, transcript) {
       }
       pre {
         margin: 0; padding: 16px 20px;
-        font: 20px/1.35 Mono, ui-monospace, monospace;
-        white-space: pre; overflow: hidden;
-        height: ${H - 36}px; box-sizing: border-box;
+        font: 16px/1.4 Mono, ui-monospace, monospace;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        height: ${H - 36}px; box-sizing: border-box; overflow: hidden;
       }
     </style>
   </head>
@@ -284,38 +344,32 @@ async function writeTerminalFrame(page, tmp, transcript) {
   return dest;
 }
 
-function specExcerpts() {
-  const left = `async function measureAtEnd(page) {
-  await scrollToDocumentEnd(page);
-  const action = await boundingRect(page, "#last-action");
-  const footer = await boundingRect(page, "#site-footer");
-  const hit = await hitTestCenter(page, "#last-action");
-  return { action, footer, hit };
+async function fileExcerpt(rel, startLine, endLine, excerpt) {
+  const text = await readFile(path.join(ROOT, rel), "utf8");
+  const lines = text.split("\n");
+  const body = lines.slice(startLine - 1, endLine).slice(0, 15).join("\n");
+  return {
+    title: excerpt ? `${rel} (excerpt)` : rel,
+    body,
+  };
 }
 
-const { action, footer, hit } = await measureAtEnd(page);
-expect(overlapHeight(action, footer)).toBeGreaterThan(CLEAR_DEFECT_PX);
-expect(hit.hit?.id).toBe("site-footer");`;
-
-  const right = `export async function hitTestCenter(page, selector) {
-  const target = await boundingRect(page, selector);
-  const x = target.left + target.width / 2;
-  const y = target.top + target.height / 2;
-  const hit = await page.evaluate(({ x: px, y: py }) => {
-    const node = document.elementFromPoint(px, py);
-    if (!node || !(node instanceof HTMLElement)) {
-      return null;
-    }
-    return { id: node.id, tag: node.tagName.toLowerCase() };
-  }, { x, y });
-  return { x, y, hit, target };
-}`;
+async function specExcerpts() {
+  const left = await fileExcerpt(
+    "tests/fixed-footer-overlap.spec.ts",
+    21,
+    30,
+    false,
+  );
+  const right = await fileExcerpt("tests/helpers.ts", 163, 177, true);
   return { left, right };
 }
 
-async function writeSpecPng(page) {
-  const { left, right } = specExcerpts();
+async function writeSpecPng(page, fonts) {
+  const { left, right } = await specExcerpts();
   const html = path.join(os.tmpdir(), `ubc-spec-${Date.now()}.html`);
+  const esc = (value) =>
+    value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   await writeFile(
     html,
     `<!doctype html>
@@ -323,8 +377,8 @@ async function writeSpecPng(page) {
   <head>
     <meta charset="utf-8" />
     <style>
-      @font-face { font-family: Mono; src: url("file://${FONT_MONO}"); }
-      @font-face { font-family: MonoB; src: url("file://${FONT_MONO_BOLD}"); font-weight: 700; }
+      @font-face { font-family: Mono; src: url("${pathToFileURL(fonts.mono).href}"); }
+      @font-face { font-family: MonoB; src: url("${pathToFileURL(fonts.monoBold).href}"); font-weight: 700; }
       html, body { margin: 0; width: ${W}px; height: ${H}px; background: #111827; color: #e5e7eb; }
       .row { display: flex; height: ${H}px; }
       .pane {
@@ -333,26 +387,25 @@ async function writeSpecPng(page) {
       }
       .pane:last-child { border-right: 0; }
       h2 {
-        margin: 0 0 10px; font: 700 18px/1.2 MonoB, ui-monospace, monospace;
+        margin: 0 0 10px; font: 700 16px/1.2 MonoB, ui-monospace, monospace;
         color: #93c5fd; letter-spacing: 0;
       }
       pre {
-        margin: 0; font: 20px/1.36 Mono, ui-monospace, monospace;
+        margin: 0; font: 13px/1.38 Mono, ui-monospace, monospace;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
       }
-      .hi { color: #fbbf24; }
     </style>
   </head>
   <body>
     <div class="row">
       <div class="pane">
-        <h2>tests/fixed-footer-overlap.spec.ts</h2>
-        <pre>${left.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</pre>
+        <h2>${esc(left.title)}</h2>
+        <pre>${esc(left.body)}</pre>
       </div>
       <div class="pane">
-        <h2>tests/helpers.ts · hitTestCenter()</h2>
-        <pre>${right.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</pre>
+        <h2>${esc(right.title)}</h2>
+        <pre>${esc(right.body)}</pre>
       </div>
     </div>
   </body>
@@ -375,8 +428,6 @@ function concatList(entries) {
 }
 
 async function encodeMp4(listPath, dest, sizeFilter) {
-  // yuv420p needs even height; 675 is odd, so pad 1px then crop is skipped:
-  // scale/pad to requested even canvas (1200x676) after the 1200x675 frames.
   const vf = sizeFilter;
   await run("ffmpeg", [
     "-hide_banner",
@@ -428,11 +479,12 @@ function trimPlaywrightOutput(stdout, stderr) {
     .filter((line) => !line.includes("trace-warnings"));
   const start = lines.findIndex((line) => /Running \d+ tests/.test(line));
   const sliced = start >= 0 ? lines.slice(start) : lines;
-  const keep = sliced.filter((line) => line.trim().length > 0).slice(-18);
+  const keep = sliced.filter((line) => line.trim().length > 0).slice(-14);
   return keep.join("\n");
 }
 
 async function main() {
+  const fonts = await resolveFonts();
   await mkdir(MEDIA, { recursive: true });
   const tmp = await mkdtemp(path.join(os.tmpdir(), "ubc-launch-"));
   const browser = await chromium.launch();
@@ -445,6 +497,7 @@ async function main() {
       "title",
       "ui-break-cases",
       "3 CSS layout bugs · broken / fixed / control + a Playwright test",
+      fonts,
     );
     const end = await writeCard(
       page,
@@ -452,28 +505,41 @@ async function main() {
       "end",
       "github.com/EstebanIndiveri/ui-break-cases",
       "Reproducible bugs, explained fixes, tests you can reuse.",
+      fonts,
     );
 
     const frames = [];
     for (const item of CASES) {
       for (const variant of ["broken", "fixed"]) {
         const raw = path.join(tmp, `${item.id}-${variant}-raw.png`);
-        const framed = path.join(tmp, `${item.id}-${variant}.png`);
         await captureVariant(page, item, variant, raw);
-        await padToFrame(raw, framed);
+        const framed = await composeFixtureFrame(
+          page,
+          tmp,
+          raw,
+          variant,
+          item.fixedCaption,
+          fonts,
+        );
         frames.push({ id: item.id, variant, file: framed });
       }
     }
 
     console.log("Running npx playwright test for the terminal segment…");
-    const testRun = await runCapture("npx", ["playwright", "test", "--reporter=list"]);
+    const testRun = await runCapture("npx", [
+      "playwright",
+      "test",
+      "--reporter=list",
+    ]);
     if (testRun.code !== 0) {
-      throw new Error(`npx playwright test exited ${testRun.code}\n${testRun.stdout}\n${testRun.stderr}`);
+      throw new Error(
+        `npx playwright test exited ${testRun.code}\n${testRun.stdout}\n${testRun.stderr}`,
+      );
     }
     const transcript = trimPlaywrightOutput(testRun.stdout, testRun.stderr);
-    const terminal = await writeTerminalFrame(page, tmp, transcript);
+    const terminal = await writeTerminalFrame(page, tmp, transcript, fonts);
 
-    await writeSpecPng(page);
+    await writeSpecPng(page, fonts);
 
     const list = path.join(tmp, "frames.txt");
     await writeFile(
@@ -495,7 +561,6 @@ async function main() {
     const square = path.join(MEDIA, "launch-ubc-1080.mp4");
     const gif = path.join(MEDIA, "launch-ubc.gif");
 
-    // 1200×675 is odd in height; pad 1 px so H.264 yuv420p is valid.
     await encodeMp4(
       list,
       wide,
@@ -508,7 +573,12 @@ async function main() {
     );
     await encodeGif(wide, gif);
 
-    for (const dest of [wide, square, gif, path.join(MEDIA, "spec-hit-test.png")]) {
+    for (const dest of [
+      wide,
+      square,
+      gif,
+      path.join(MEDIA, "spec-hit-test.png"),
+    ]) {
       const info = await stat(dest);
       console.log(`${path.relative(ROOT, dest)} ${info.size} bytes`);
     }
