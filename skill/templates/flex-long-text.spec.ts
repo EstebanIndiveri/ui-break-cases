@@ -1,29 +1,28 @@
 /**
  * Generated-test template for flex-long-text.
  *
- * Asserts the HEALTHY layout (the repo's "fixed" variant). Copy this file,
- * then change TARGET.path / selectors / viewport to the page under review.
+ * Asserts the HEALTHY layout (the "fixed" variant). Copy this file and
+ * `skill/lib/geometry.ts`. Set TARGET.url / selectors / viewport / copy
+ * to the page under review. Do not import from ../../src or ../../tests.
  *
  * Expected when pointed at this repo's fixtures:
- *   broken  → FAIL
+ *   broken  → FAIL (an expect assertion, not a crash)
  *   fixed   → PASS
  * Do not run this as a bug report against a control (local code-block scroll).
  */
 import { expect, test } from "@playwright/test";
-import { FLEX_LONG_TEXT } from "../../src/cases.ts";
 import {
   boundingRect,
   clickCenter,
   expectInViewport,
   expectInside,
   hitTestCenter,
-  openFixture,
+  openPage,
   readText,
-} from "../../tests/helpers.ts";
+} from "../lib/geometry.ts";
 
 const TARGET = {
-  path:
-    process.env.UI_BREAK_TARGET_PATH ?? "fixtures/flex-long-text/fixed.html",
+  url: process.env.UI_BREAK_TARGET_URL ?? "",
   viewport: { width: 390, height: 640 },
   selectors: {
     text: "#long-text",
@@ -31,13 +30,20 @@ const TARGET = {
     action: "#action",
     status: "#action-status",
   },
-  copy: FLEX_LONG_TEXT,
+  copy: "https://api.example.test/evt_9f3c2a",
 };
+
+function actionId(): string {
+  return TARGET.selectors.action.replace(/^#/, "");
+}
 
 test("flex-long-text healthy: token stays in the card and the action is hittable", async ({
   page,
 }) => {
-  await openFixture(page, TARGET.path, TARGET.viewport);
+  expect(TARGET.url.length, "Set TARGET.url or UI_BREAK_TARGET_URL").toBeGreaterThan(
+    0,
+  );
+  await openPage(page, TARGET.url, TARGET.viewport);
 
   await expect(readText(page.locator(TARGET.selectors.text))).resolves.toBe(
     TARGET.copy,
@@ -47,13 +53,13 @@ test("flex-long-text healthy: token stays in the card and the action is hittable
   const text = await boundingRect(page, TARGET.selectors.text);
   const action = await boundingRect(page, TARGET.selectors.action);
 
-  // 4px slack — GEOM_TOLERANCE_PX in tests/helpers.ts
+  // 4px slack — GEOM_TOLERANCE_PX in skill/lib/geometry.ts
   expectInside(text, card);
   expectInside(action, card);
   expectInViewport(action, TARGET.viewport);
 
   const hit = await hitTestCenter(page, TARGET.selectors.action);
-  expect(hit.hit?.id).toBe("action");
+  expect(hit.hit?.id).toBe(actionId());
   await clickCenter(page, hit);
   await expect(page.locator(TARGET.selectors.status)).toHaveText("Copied");
 });

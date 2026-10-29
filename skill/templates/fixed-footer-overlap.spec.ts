@@ -1,11 +1,12 @@
 /**
  * Generated-test template for fixed-footer-overlap.
  *
- * Asserts the HEALTHY layout (the repo's "fixed" variant). Copy this file,
- * then change TARGET.path / selectors / viewport to the page under review.
+ * Asserts the HEALTHY layout (the "fixed" variant). Copy this file and
+ * `skill/lib/geometry.ts`. Set TARGET.url / selectors / viewport / copy
+ * to the page under review. Do not import from ../../src or ../../tests.
  *
  * Expected when pointed at this repo's fixtures:
- *   broken  → FAIL
+ *   broken  → FAIL (an expect assertion, not a crash)
  *   fixed   → PASS
  *
  * Scroll to the end and hit-test BEFORE clicking. A locator click can
@@ -15,36 +16,40 @@
  * it as no bug instead of treating this test as a defect report.
  */
 import { expect, test } from "@playwright/test";
-import { FOOTER_ACTION_LABEL } from "../../src/cases.ts";
 import {
   GEOM_TOLERANCE_PX,
   boundingRect,
   clickCenter,
   expectInViewport,
   hitTestCenter,
-  openFixture,
+  openPage,
   overlapHeight,
   readText,
   scrollToDocumentEnd,
-} from "../../tests/helpers.ts";
+} from "../lib/geometry.ts";
 
 const TARGET = {
-  path:
-    process.env.UI_BREAK_TARGET_PATH ??
-    "fixtures/fixed-footer-overlap/fixed.html",
+  url: process.env.UI_BREAK_TARGET_URL ?? "",
   viewport: { width: 360, height: 500 },
   selectors: {
     action: "#last-action",
     footer: "#site-footer",
     status: "#action-status",
   },
-  copy: FOOTER_ACTION_LABEL,
+  copy: "Confirm booking",
 };
+
+function actionId(): string {
+  return TARGET.selectors.action.replace(/^#/, "");
+}
 
 test("fixed-footer-overlap healthy: last action stays above the footer and is hittable", async ({
   page,
 }) => {
-  await openFixture(page, TARGET.path, TARGET.viewport);
+  expect(TARGET.url.length, "Set TARGET.url or UI_BREAK_TARGET_URL").toBeGreaterThan(
+    0,
+  );
+  await openPage(page, TARGET.url, TARGET.viewport);
 
   await expect(readText(page.locator(TARGET.selectors.action))).resolves.toBe(
     TARGET.copy,
@@ -63,7 +68,7 @@ test("fixed-footer-overlap healthy: last action stays above the footer and is hi
   expect(overlapHeight(action, footer)).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);
   expect(action.bottom).toBeLessThanOrEqual(footer.top + GEOM_TOLERANCE_PX);
   expectInViewport(action, TARGET.viewport);
-  expect(hit.hit?.id).toBe("last-action");
+  expect(hit.hit?.id).toBe(actionId());
   await clickCenter(page, hit);
   await expect(page.locator(TARGET.selectors.status)).toHaveText(
     "Booking confirmed",

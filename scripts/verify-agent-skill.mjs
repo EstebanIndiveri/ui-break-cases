@@ -5,12 +5,14 @@
  * What this proves:
  *   - Detection rules in skill/verify/classify.ts label each of the nine
  *     fixtures as broken / fixed / control (control ⇒ no bug).
- *   - skill/templates/<id>.spec.ts, pointed at a fixture, FAILS on broken
- *     and PASSES on fixed.
+ *   - skill/templates/<id>.spec.ts, pointed at a fixture URL, FAILS on broken
+ *     via an expect() assertion and PASSES on fixed.
+ *   - Control fixtures have real geometry checks (not hardcoded ok).
+ *   - skill/SKILL.md copies have not drifted.
  *
  * What this does not prove:
  *   - That a coding agent (Cursor, Claude Code, Codex) will follow the skill.
- *   - That the templates work on a page that is not one of these fixtures.
+ *     See docs/agent-runs/ for a recorded Cursor run.
  *
  * Usage: npm run verify:skill
  */
@@ -19,6 +21,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const PREVIEW = "http://127.0.0.1:4173";
 
 const CASES = [
   {
@@ -52,6 +55,26 @@ function run(args, env = {}) {
     const child = spawn("npx", ["playwright", "test", ...args], {
       cwd: ROOT,
       env: { ...process.env, ...env },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("close", (code) => {
+      resolve({ code: code ?? 1, stdout, stderr });
+    });
+  });
+}
+
+function runNode(script) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [script], {
+      cwd: ROOT,
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
@@ -105,18 +128,41 @@ function parseListResults(output) {
   return results;
 }
 
+function expectAssertionFailed(output) {
+  return /Error:\s*expect\(/.test(output) || /expect\(received\)/.test(output);
+}
+
+async function copies() {
+  console.log("\n# Skill copies (scripts/check-skill-copies.mjs)\n");
+  const result = await runNode(path.join("scripts", "check-skill-copies.mjs"));
+  printOutput("skill-copies", result);
+  record({
+    caseId: "skill-copies",
+    variant: "n/a",
+    check: "drift",
+    ok: result.code === 0,
+    detail:
+      result.code === 0
+        ? "skill/SKILL.md matches .agents and skill/install/claude"
+        : "skill copies drifted or missing",
+  });
+}
+
 async function detection() {
   console.log("\n# Detection (skill/verify/classify.ts via tests/agent-skill.spec.ts)\n");
   const result = await run(["tests/agent-skill.spec.ts", "--reporter=list"]);
   printOutput("detection", result);
   const parsed = parseListResults(result.stdout);
+
   for (const item of CASES) {
     for (const variant of ["broken", "fixed", "control"]) {
-      const match = parsed.find((entry) =>
-        entry.title.includes(`${item.id} ${variant}`),
+      const match = parsed.find(
+        (entry) =>
+          entry.title.includes(`${item.id} ${variant}`) &&
+          entry.title.includes("resembles"),
       );
       const bug = variant === "broken";
-      const ok = result.code === 0 && Boolean(match?.ok);
+      const ok = Boolean(match?.ok);
       record({
         caseId: item.id,
         variant,
@@ -128,68 +174,99 @@ async function detection() {
             : `bug=no resembles=${variant}`
           : match
             ? "classifier assertion failed"
-            : `playwright exited ${result.code} (no matching test line)`,
+            : "no matching test line (reported separately from other rows)",
       });
     }
   }
+
+  for (const item of CASES) {
+    const match = parsed.find(
+      (entry) =>
+        entry.title.includes(`${item.id} control`) &&
+        entry.title.includes("control-geometry"),
+    );
+    record({
+      caseId: item.id,
+      variant: "control",
+      check: "control-geometry",
+      ok: Boolean(match?.ok),
+      detail: match?.ok
+        ? "geometry: local scroll / painted expand / matching spacer"
+        : match
+          ? "control geometry assertion failed"
+          : "no control-geometry test line",
+    });
+  }
+
+  const mutations = parsed.filter((entry) =>
+    /overflow-x:visible|display:none expand/.test(entry.title),
+  );
+  record({
+    caseId: "mutations",
+    variant: "n/a",
+    check: "not-control",
+    ok: mutations.length === 2 && mutations.every((entry) => entry.ok),
+    detail:
+      mutations.length === 2 && mutations.every((entry) => entry.ok)
+        ? "overflow-x:visible and hidden expand are not control"
+        : `mutation tests parsed=${mutations.length}`,
+  });
+
+  const threshold = parsed.find((entry) => entry.title.includes("99999"));
+  record({
+    caseId: "flex-threshold",
+    variant: "n/a",
+    check: "99999-mutant",
+    ok: Boolean(threshold?.ok),
+    detail: threshold?.ok
+      ? "isClearFlexOverflow(…, 99999) is false on the broken fixture"
+      : "threshold mutant test missing or failed",
+  });
 }
 
 async function templates() {
-  console.log("\n# Generated templates (skill/templates, UI_BREAK_TARGET_PATH)\n");
+  console.log("\n# Generated templates (skill/templates, UI_BREAK_TARGET_URL)\n");
   for (const item of CASES) {
     const spec = path.join("skill/templates", `${item.id}.spec.ts`);
     for (const variant of ["broken", "fixed"]) {
       const fixturePath = item.variants[variant];
       const result = await run(
         ["-c", "playwright.skill.config.ts", spec, "--reporter=list"],
-        { UI_BREAK_TARGET_PATH: fixturePath },
+        { UI_BREAK_TARGET_URL: `${PREVIEW}/${fixturePath}` },
       );
       printOutput(`${item.id} ${variant}`, result);
       const wantFail = variant === "broken";
       const failed = result.code !== 0;
-      const ok = wantFail ? failed : !failed;
+      const expectFail = expectAssertionFailed(`${result.stdout}\n${result.stderr}`);
+      const ok = wantFail ? failed && expectFail : !failed;
       record({
         caseId: item.id,
         variant,
         check: "generated-test",
         ok,
         detail: wantFail
-          ? failed
-            ? "FAIL on broken (expected)"
-            : "unexpected PASS on broken"
+          ? failed && expectFail
+            ? "FAIL on broken via expect()"
+            : failed
+              ? "FAIL on broken but not an expect() assertion"
+              : "unexpected PASS on broken"
           : failed
             ? "unexpected FAIL on fixed"
             : "PASS on fixed (expected)",
       });
     }
-    record({
-      caseId: item.id,
-      variant: "control",
-      check: "generated-test",
-      ok: true,
-      detail: "not applied — control is classified as no bug",
-    });
   }
 }
 
 async function main() {
+  await copies();
   await detection();
   await templates();
 
-  console.log("\n# Per-fixture counts\n");
-  const byFixture = new Map();
+  console.log("\n# Per-check counts\n");
   for (const row of rows) {
-    const key = `${row.caseId}/${row.variant}`;
-    const current = byFixture.get(key) ?? { ok: 0, fail: 0 };
-    if (row.ok) {
-      current.ok += 1;
-    } else {
-      current.fail += 1;
-    }
-    byFixture.set(key, current);
-  }
-  for (const [key, counts] of byFixture) {
-    console.log(`${key.padEnd(36)} pass=${counts.ok} fail=${counts.fail}`);
+    const key = `${row.caseId}/${row.variant}/${row.check}`;
+    console.log(`${key.padEnd(52)} ${row.ok ? "pass" : "fail"}  ${row.detail}`);
   }
 
   console.log(

@@ -24,7 +24,7 @@ Open the page directly. Set the viewport to 360×500.
 | --- | --- | --- |
 | **broken** | At max scroll, overlap > 16px and the hit-test hits the footer. | Yes |
 | **fixed** | Reserved space (fixture: `main { padding-bottom: 88px; } /* footer is 72px */`). Overlap ≤ 4px; hit-test hits the action. | No |
-| **control** | The same fixed bar with a matching spacer (fixture: `.spacer { height: 72px; }`). Hit-test hits the action. `position: fixed` is valid here. | No — do not fix |
+| **control** | The same fixed bar with a **painted** matching spacer (fixture: `.spacer { height: 72px; }`). Hit-test hits the action. A spacer that is `display: none` is not a control. | No — do not fix |
 
 A fixed bar is not automatically a bug. If a spacer or padding equal to the footer height keeps the last control clear, report no bug.
 
@@ -40,4 +40,4 @@ An equivalent spacer at the end of the document is also acceptable (that is how 
 
 ## Test
 
-Copy `skill/templates/fixed-footer-overlap.spec.ts`. The generated test must fail on the broken layout and pass on the fixed layout. Always scroll to the end and hit-test before clicking.
+Copy `skill/templates/fixed-footer-overlap.spec.ts` and `skill/lib/geometry.ts`. Set `TARGET.url`. The generated test must fail on the broken layout via `expect` and pass on the fixed layout. Always scroll to the end and hit-test before clicking.

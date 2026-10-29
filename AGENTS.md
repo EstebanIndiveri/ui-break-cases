@@ -23,7 +23,7 @@ npx playwright install --with-deps chromium
 | `npm run preview` | Serve `dist/` at port 4173 |
 | `npm test` | Build, preview, Playwright Chromium |
 | `npm run check:pages` | `build:pages`, serve `dist/` at `/ui-break-cases/`, assert gallery + assets + 9 fixtures return 200 |
-| `npm run verify:skill` | Classifier + generated templates against broken/fixed/control fixtures |
+| `npm run verify:skill` | Classifier + generated templates + control geometry + skill-copy drift |
 | `npm run capture:demo` | Playwright screenshots of broken/fixed fixtures + system `ffmpeg` → `docs/media/broken-vs-fixed.gif` |
 
 Tests hit the preview server, not `npm run dev`. If preview is already running on 4173, Playwright reuses it outside CI.
@@ -47,7 +47,7 @@ A CI workflow is included (`.github/workflows/ci.yml`); GitHub Actions is curren
 - Fixtures: `public/fixtures/<id>/`
 - Tests: `tests/<id>.spec.ts`
 - Gallery: `src/gallery.ts`, `src/styles.css`
-- Agent skill: `skill/SKILL.md`, wrappers under `.cursor/` and `.claude/`, docs in `docs/agent-skill.md`
+- Agent skill: `skill/SKILL.md` (canonical), identical copy at `.agents/skills/ui-break-cases/`, helpers in `skill/lib/geometry.ts`, docs in `docs/agent-skill.md`
 
 New cases: follow `docs/adding-a-case.md`. If you add a case, update `skill/cases/` and `skill/templates/` too.
 
@@ -61,5 +61,6 @@ New cases: follow `docs/adding-a-case.md`. If you add a case, update `skill/case
 
 ## Decisions (v0.2)
 
-- The agent skill lives in-repo (`skill/` plus Cursor / Claude Code wrappers and a Codex `AGENTS.md` snippet). It is not published to a marketplace.
-- `npm run verify:skill` is a deterministic stand-in for “run an agent against the fixtures”: templates fail on broken, pass on fixed; controls classify as no bug. It does not prove a coding agent will follow the skill.
+- The agent skill lives in-repo. `skill/SKILL.md` is the source of truth; Cursor and Codex load the identical copy at `.agents/skills/ui-break-cases/SKILL.md`. Claude Code copies `skill/install/claude.SKILL.md`. There is no second skill under `.cursor/skills` or `.claude/skills` (Cursor would double-load it). It is not published to a marketplace.
+- Generated tests import `skill/lib/geometry.ts` and open `TARGET.url` with `page.goto`. They must not import `../../src` or `../../tests`.
+- `npm run verify:skill` is a deterministic stand-in for the templates and classifier. Recorded Cursor runs live in `docs/agent-runs/`. It does not prove Claude Code or Codex will follow the skill.

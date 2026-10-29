@@ -3,21 +3,29 @@ import {
   CLEAR_DEFECT_PX,
   GEOM_TOLERANCE_PX,
   boundingRect,
+  computedOverflowX,
   documentHorizontalOverflow,
   hitTestCenter,
   horizontalOverflow,
-  openFixture,
+  isClearFlexOverflow,
+  isPainted,
+  openPage,
   overflowIsHidden,
+  overflowXAllowsScroll,
   overlapHeight,
   scrollMetrics,
   scrollToDocumentEnd,
   textRangeClip,
-} from "../../tests/helpers.ts";
+} from "../lib/geometry.ts";
 
 /**
  * Mechanical stand-in for the skill's detection rules.
  * A coding agent is expected to reach the same classification by following
  * skill/SKILL.md; this module does not call an LLM.
+ *
+ * Control wins over a false broken match (same as skill/SKILL.md).
+ * Broken is returned only when the defect exceeds CLEAR_DEFECT_PX.
+ * The 4–16px band is unclassified (null), not a fallback "broken".
  */
 
 export type Resembles = "broken" | "fixed" | "control";
@@ -36,6 +44,7 @@ export async function count(page: Page, selector: string): Promise<number> {
 
 export async function classifyFlexLongText(
   page: Page,
+  threshold = CLEAR_DEFECT_PX,
 ): Promise<Classification | null> {
   const codeBlocks = await count(page, "#code-block");
   const cards = await count(page, "#card");
@@ -44,30 +53,30 @@ export async function classifyFlexLongText(
     return null;
   }
 
-  if (codeBlocks > 0 && cards === 0) {
+  if (codeBlocks > 0) {
+    const overflowX = await computedOverflowX(page, "#code-block");
     const pageOverflow = await documentHorizontalOverflow(page);
     const metrics = await scrollMetrics(page, "#code-block");
     const localScroll =
       metrics.scrollWidth > metrics.clientWidth + CLEAR_DEFECT_PX;
     const pageContained = pageOverflow <= GEOM_TOLERANCE_PX;
-    if (localScroll && pageContained) {
+    if (
+      overflowXAllowsScroll(overflowX) &&
+      localScroll &&
+      pageContained
+    ) {
       return {
         caseId: "flex-long-text",
         resembles: "control",
         bug: false,
         reasons: [
-          "Code block uses local overflow-x; page overflow is within 4px slack.",
+          `Code block overflow-x is ${overflowX}; local scrollWidth-clientWidth is ${(metrics.scrollWidth - metrics.clientWidth).toFixed(1)}px; page overflow is ${pageOverflow.toFixed(1)}px.`,
         ],
       };
     }
-    return {
-      caseId: "flex-long-text",
-      resembles: "control",
-      bug: false,
-      reasons: [
-        "Token lives in a code block rather than a flex card; treat as control, not a flex-row bug.",
-      ],
-    };
+    if (cards === 0) {
+      return null;
+    }
   }
 
   if (cards === 0 || (await count(page, "#action")) === 0) {
@@ -82,16 +91,13 @@ export async function classifyFlexLongText(
     horizontalOverflow(action, card),
   );
 
-  if (
-    overflow > CLEAR_DEFECT_PX &&
-    action.right > card.right + CLEAR_DEFECT_PX
-  ) {
+  if (isClearFlexOverflow(overflow, action.right, card.right, threshold)) {
     return {
       caseId: "flex-long-text",
       resembles: "broken",
       bug: true,
       reasons: [
-        `Flex row overflows the card by ${overflow.toFixed(1)}px (defect threshold 16px).`,
+        `Flex row overflows the card by ${overflow.toFixed(1)}px (defect threshold ${threshold}px).`,
       ],
     };
   }
@@ -112,14 +118,7 @@ export async function classifyFlexLongText(
     };
   }
 
-  return {
-    caseId: "flex-long-text",
-    resembles: "broken",
-    bug: true,
-    reasons: [
-      "Flex card is present but the row is not clearly inside the card.",
-    ],
-  };
+  return null;
 }
 
 export async function classifyFixedHeightLabel(
@@ -130,31 +129,35 @@ export async function classifyFixedHeightLabel(
   }
 
   const clip = await textRangeClip(page, "#label");
-  const expandCount = await count(page, "#expand-toggle");
+  const expandPainted = await isPainted(page, "#expand-toggle");
   const hidden = overflowIsHidden(clip);
 
-  if (expandCount > 0) {
-    return {
-      caseId: "fixed-height-label",
-      resembles: "control",
-      bug: false,
-      reasons: [
-        "Clipped label ships an explicit expand control; valid by design.",
-      ],
-    };
+  if (expandPainted) {
+    const aria = await page.locator("#expand-toggle").getAttribute("aria-expanded");
+    if (hidden && clip.clippedBottom > CLEAR_DEFECT_PX && aria !== null) {
+      return {
+        caseId: "fixed-height-label",
+        resembles: "control",
+        bug: false,
+        reasons: [
+          "Clipped label has a painted expand control with aria-expanded; valid by design.",
+        ],
+      };
+    }
   }
 
   if (
     clip.rects.length > 1 &&
     hidden &&
-    clip.clippedBottom > CLEAR_DEFECT_PX
+    clip.clippedBottom > CLEAR_DEFECT_PX &&
+    !expandPainted
   ) {
     return {
       caseId: "fixed-height-label",
       resembles: "broken",
       bug: true,
       reasons: [
-        `Label client rects extend ${clip.clippedBottom.toFixed(1)}px past a hidden-overflow box with no expand control.`,
+        `Label client rects extend ${clip.clippedBottom.toFixed(1)}px past a hidden-overflow box with no painted expand control.`,
       ],
     };
   }
@@ -205,7 +208,25 @@ export async function classifyFixedFooterOverlap(
 
   const overlap = overlapHeight(action, footer);
   const hit = await hitTestCenter(page, "#last-action");
-  const spacerCount = await count(page, ".spacer");
+  const spacerPainted = await isPainted(page, ".spacer");
+  const clear =
+    overlap <= GEOM_TOLERANCE_PX &&
+    action.bottom <= footer.top + GEOM_TOLERANCE_PX &&
+    hit.hit?.id === "last-action";
+
+  if (spacerPainted && clear) {
+    const spacer = await boundingRect(page, ".spacer");
+    if (spacer.height + GEOM_TOLERANCE_PX >= footer.height) {
+      return {
+        caseId: "fixed-footer-overlap",
+        resembles: "control",
+        bug: false,
+        reasons: [
+          `Painted spacer ${spacer.height.toFixed(1)}px matches footer ${footer.height.toFixed(1)}px; last action is hittable.`,
+        ],
+      };
+    }
+  }
 
   if (overlap > CLEAR_DEFECT_PX && hit.hit?.id === "site-footer") {
     return {
@@ -218,41 +239,18 @@ export async function classifyFixedFooterOverlap(
     };
   }
 
-  const clear =
-    overlap <= GEOM_TOLERANCE_PX &&
-    action.bottom <= footer.top + GEOM_TOLERANCE_PX &&
-    hit.hit?.id === "last-action";
-
-  if (!clear) {
+  if (clear) {
     return {
       caseId: "fixed-footer-overlap",
-      resembles: "broken",
-      bug: true,
-      reasons: [
-        "Fixed footer is present and the last action is not clearly hittable at end of scroll.",
-      ],
-    };
-  }
-
-  if (spacerCount > 0) {
-    return {
-      caseId: "fixed-footer-overlap",
-      resembles: "control",
+      resembles: "fixed",
       bug: false,
       reasons: [
-        "Fixed bar with a matching spacer; last action is hittable — valid by design.",
+        "Reserved space keeps the last action above the fixed footer and hittable.",
       ],
     };
   }
 
-  return {
-    caseId: "fixed-footer-overlap",
-    resembles: "fixed",
-    bug: false,
-    reasons: [
-      "Reserved space keeps the last action above the fixed footer and hittable.",
-    ],
-  };
+  return null;
 }
 
 export async function classifyFixture(
@@ -260,7 +258,7 @@ export async function classifyFixture(
   fixturePath: string,
   viewport: { width: number; height: number },
 ): Promise<Classification> {
-  await openFixture(page, fixturePath, viewport);
+  await openPage(page, fixturePath, viewport);
   const matches = (
     await Promise.all([
       classifyFlexLongText(page),
@@ -269,13 +267,13 @@ export async function classifyFixture(
     ])
   ).filter((item): item is Classification => item !== null);
 
-  const bug = matches.find((item) => item.bug);
-  if (bug) {
-    return bug;
-  }
   const control = matches.find((item) => item.resembles === "control");
   if (control) {
     return control;
+  }
+  const bug = matches.find((item) => item.bug);
+  if (bug) {
+    return bug;
   }
   const fixed = matches.find((item) => item.resembles === "fixed");
   if (fixed) {

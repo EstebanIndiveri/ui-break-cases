@@ -1,41 +1,42 @@
 /**
  * Generated-test template for fixed-height-label.
  *
- * Asserts the HEALTHY layout (the repo's "fixed" variant). Copy this file,
- * then change TARGET.path / selectors / viewport to the page under review.
+ * Asserts the HEALTHY layout (the "fixed" variant). Copy this file and
+ * `skill/lib/geometry.ts`. Set TARGET.url / selectors / viewport / copy
+ * to the page under review. Do not import from ../../src or ../../tests.
  *
  * Expected when pointed at this repo's fixtures:
- *   broken  → FAIL
+ *   broken  → FAIL (an expect assertion, not a crash)
  *   fixed   → PASS
  * Do not run this as a bug report against a control (clip + expand button).
  */
 import { expect, test } from "@playwright/test";
-import { CLIP_LABEL_TEXT } from "../../src/cases.ts";
 import {
   GEOM_TOLERANCE_PX,
   boundingRect,
-  openFixture,
+  openPage,
   overflowIsHidden,
   readText,
   textRangeClip,
-} from "../../tests/helpers.ts";
+} from "../lib/geometry.ts";
 
 const TARGET = {
-  path:
-    process.env.UI_BREAK_TARGET_PATH ??
-    "fixtures/fixed-height-label/fixed.html",
+  url: process.env.UI_BREAK_TARGET_URL ?? "",
   viewport: { width: 390, height: 640 },
   selectors: {
     label: "#label",
     next: "#next-content",
   },
-  copy: CLIP_LABEL_TEXT,
+  copy: "Delayed at the distribution hub because the outbound scan failed validation for carton NW-4418",
 };
 
 test("fixed-height-label healthy: full sentence paints and the next block is clear", async ({
   page,
 }) => {
-  await openFixture(page, TARGET.path, TARGET.viewport);
+  expect(TARGET.url.length, "Set TARGET.url or UI_BREAK_TARGET_URL").toBeGreaterThan(
+    0,
+  );
+  await openPage(page, TARGET.url, TARGET.viewport);
 
   await expect(readText(page.locator(TARGET.selectors.label))).resolves.toBe(
     TARGET.copy,

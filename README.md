@@ -114,14 +114,15 @@ Copy the helper that matches your bug from `tests/helpers.ts`. Do not treat thos
 
 v0.2 ships an in-repo skill so a coding agent can review a page for these three patterns, skip a **control**, propose a fix that matches the **fixed** fixture, and emit a Playwright test.
 
-- Canonical instructions: [`skill/SKILL.md`](skill/SKILL.md)
+- Canonical instructions: [`skill/SKILL.md`](skill/SKILL.md) (Cursor/Codex load [`.agents/skills/ui-break-cases/`](.agents/skills/ui-break-cases/))
 - Install per agent, limits, and what was verified locally: [`docs/agent-skill.md`](docs/agent-skill.md)
+- Recorded Cursor run on the nine fixtures: [`docs/agent-runs/`](docs/agent-runs/README.md)
 
 ```bash
 npm run verify:skill
 ```
 
-That command is a deterministic harness (classifier + generated templates on the nine fixtures). It does not run Cursor, Claude Code, or Codex.
+That command is a deterministic harness (classifier, generated templates, control geometry, skill-copy drift). A Cursor run against the nine fixtures is recorded under `docs/agent-runs/`. Claude Code and Codex were not run.
 
 Limits, also in the README footer of that doc: **Chromium only**, **these three patterns only**, and **a human must review the agent’s output**.
 

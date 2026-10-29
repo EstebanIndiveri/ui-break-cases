@@ -22,7 +22,7 @@ Open the page directly (not a gallery iframe). Set the viewport to 390×640.
 | --- | --- | --- |
 | **broken** | Card row overflows by more than 16px; action’s right edge is past the card by more than 16px. | Yes |
 | **fixed** | Token and action sit inside the card (4px slack); `elementFromPoint` at the action center hits the action. | No |
-| **control** | There is a code block (`#code-block`) with local `overflow-x: auto` / `white-space: nowrap`. `documentHorizontalOverflow` is ≤ 4px. Scrolling the code block reveals the full token. Page overflow is not used. | No — do not fix |
+| **control** | Computed `overflow-x` on the code block is `auto` or `scroll`, `scrollWidth` exceeds `clientWidth` by more than 16px, and `documentHorizontalOverflow` is ≤ 4px. `overflow-x: visible` is not a control. | No — do not fix |
 
 If you see a horizontal scrollbar on a `<pre>`/`<code>` and the page width is stable, that is the control. Wrapping the token or adding `min-width: 0` there would be a mistaken fix.
 
@@ -39,4 +39,4 @@ Keep the full URL. Do not truncate with ellipsis, hide overflow on the card, or 
 
 ## Test
 
-Copy `skill/templates/flex-long-text.spec.ts`. Point `TARGET.path` at the user’s page. The generated test must fail on the broken layout and pass on the fixed layout.
+Copy `skill/templates/flex-long-text.spec.ts` and `skill/lib/geometry.ts`. Set `TARGET.url` to the page under review (`page.goto(TARGET.url)`). The generated test must fail on the broken layout via `expect` and pass on the fixed layout.

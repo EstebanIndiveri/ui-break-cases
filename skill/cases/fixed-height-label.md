@@ -24,7 +24,7 @@ Do not use `toBeVisible()` as the only check. Visibility can pass while glyphs a
 | --- | --- | --- |
 | **broken** | Text rects overflow a hidden box by more than 16px, and there is no expand control. | Yes |
 | **fixed** | Full sentence paints; rects stay inside the label; following content does not overlap. | No |
-| **control** | Collapsed state is clipped **and** an explicit expand control is present (`aria-expanded="false"`). Expanding reveals the sentence. No `title` attribute as the recovery path. | No — do not fix |
+| **control** | Collapsed state is clipped **and** a **painted** expand control is present (`aria-expanded`). `display: none` on the toggle is not a control. Expanding reveals the sentence. No `title` attribute as the recovery path. | No — do not fix |
 
 If the clip is intentional **and** a real control restores the text, report no bug.
 
@@ -40,4 +40,4 @@ Keep the full sentence. Do not rely on `-webkit-line-clamp` with no expand path.
 
 ## Test
 
-Copy `skill/templates/fixed-height-label.spec.ts`. The generated test must fail on the broken layout and pass on the fixed layout.
+Copy `skill/templates/fixed-height-label.spec.ts` and `skill/lib/geometry.ts`. Set `TARGET.url`. The generated test must fail on the broken layout via `expect` and pass on the fixed layout.
