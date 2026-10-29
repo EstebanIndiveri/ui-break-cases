@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.0 — 2026-10-29
+
+- Skill / plugin package for coding agents (Cursor, Claude Code, Codex) in `skill/`, with per-agent wrappers and install notes in `docs/agent-skill.md`.
+- Detection and fix guidance for each case in `src/cases.ts`, plus Playwright templates that fail on broken fixtures and pass on fixed fixtures.
+- Local `npm run verify:skill` harness. No GitHub Actions dependency. Agent output still needs a human review.
+
 ## v0.1.1 — 2026-10-29
 
 - Gallery: keyboard focus moves correctly when switching cases (#4).

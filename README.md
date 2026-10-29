@@ -110,13 +110,28 @@ For clipped text, `Range.getClientRects()` plus the container’s box and `overf
 
 Copy the helper that matches your bug from `tests/helpers.ts`. Do not treat those helpers as production detectors.
 
+## Agent skill (Cursor, Claude Code, Codex)
+
+v0.2 ships an in-repo skill so a coding agent can review a page for these three patterns, skip a **control**, propose a fix that matches the **fixed** fixture, and emit a Playwright test.
+
+- Canonical instructions: [`skill/SKILL.md`](skill/SKILL.md)
+- Install per agent, limits, and what was verified locally: [`docs/agent-skill.md`](docs/agent-skill.md)
+
+```bash
+npm run verify:skill
+```
+
+That command is a deterministic harness (classifier + generated templates on the nine fixtures). It does not run Cursor, Claude Code, or Codex.
+
+Limits, also in the README footer of that doc: **Chromium only**, **these three patterns only**, and **a human must review the agent’s output**.
+
 ## What v0.1 checks
 
 - Three cases, nine variants, all load as standalone HTML.
 - Broken tests pass by asserting the defect. They are not skipped and not marked as expected failures.
 - Fixed tests keep the original copy and check that the control still works.
 - Control tests check the intentional behavior, including the expanded summary.
-- `npm ci`, `npm run typecheck`, `npm run build`, `npm run preview`, `npm test` (Chromium), and `npm run check:pages` are the supported commands.
+- `npm ci`, `npm run typecheck`, `npm run build`, `npm run preview`, `npm test` (Chromium), `npm run verify:skill`, and `npm run check:pages` are the supported commands.
 - The gallery is keyboard-usable and keeps footer iframes at 360×500.
 - A CI workflow is included; GitHub Actions is currently disabled, so run the checks locally.
 

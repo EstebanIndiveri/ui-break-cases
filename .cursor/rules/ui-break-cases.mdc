@@ -1,0 +1,13 @@
+---
+description: Review UI for the three ui-break-cases layout bugs and emit a Playwright test. Use when looking at CSS overflow, clipped labels, or a fixed footer covering a control.
+alwaysApply: false
+---
+
+Read `skill/SKILL.md` and the matching `skill/cases/<id>.md` before changing layout or writing a Playwright test for these patterns.
+
+- Confirm with geometry: bounding boxes, `Range.getClientRects`, `elementFromPoint` before click.
+- Tolerances: 4px slack, 16px defect (`tests/helpers.ts`). No uncommented magic numbers.
+- If the page resembles a **control** (local scroll, expand button, spacer under a fixed bar), report no bug.
+- Fixes must match the `fixed` fixture: keep the copy, keep the control usable.
+- Copy `skill/templates/<id>.spec.ts`. The generated test must fail on broken and pass on fixed.
+- Chromium only. Human review required. See `docs/agent-skill.md`.

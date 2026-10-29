@@ -23,6 +23,7 @@ npx playwright install --with-deps chromium
 | `npm run preview` | Serve `dist/` at port 4173 |
 | `npm test` | Build, preview, Playwright Chromium |
 | `npm run check:pages` | `build:pages`, serve `dist/` at `/ui-break-cases/`, assert gallery + assets + 9 fixtures return 200 |
+| `npm run verify:skill` | Classifier + generated templates against broken/fixed/control fixtures |
 | `npm run capture:demo` | Playwright screenshots of broken/fixed fixtures + system `ffmpeg` → `docs/media/broken-vs-fixed.gif` |
 
 Tests hit the preview server, not `npm run dev`. If preview is already running on 4173, Playwright reuses it outside CI.
@@ -46,8 +47,9 @@ A CI workflow is included (`.github/workflows/ci.yml`); GitHub Actions is curren
 - Fixtures: `public/fixtures/<id>/`
 - Tests: `tests/<id>.spec.ts`
 - Gallery: `src/gallery.ts`, `src/styles.css`
+- Agent skill: `skill/SKILL.md`, wrappers under `.cursor/` and `.claude/`, docs in `docs/agent-skill.md`
 
-New cases: follow `docs/adding-a-case.md`.
+New cases: follow `docs/adding-a-case.md`. If you add a case, update `skill/cases/` and `skill/templates/` too.
 
 ## Decisions (v0.1)
 
@@ -56,3 +58,8 @@ New cases: follow `docs/adding-a-case.md`.
 - `appType` is `mpa` so fixture HTML is not replaced by the gallery `index.html`.
 - Shared copy is duplicated in HTML and in `src/cases.ts` so fixtures stay standalone. Keep them in sync by hand.
 - Tolerance: 4px. Defects are built to exceed 16px.
+
+## Decisions (v0.2)
+
+- The agent skill lives in-repo (`skill/` plus Cursor / Claude Code wrappers and a Codex `AGENTS.md` snippet). It is not published to a marketplace.
+- `npm run verify:skill` is a deterministic stand-in for “run an agent against the fixtures”: templates fail on broken, pass on fixed; controls classify as no bug. It does not prove a coding agent will follow the skill.
