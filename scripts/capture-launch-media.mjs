@@ -162,14 +162,49 @@ async function injectOutline(page, selector, color) {
       }
       const rect = target.getBoundingClientRect();
       const pad = 8;
+      const border = 3;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const flush = 1;
+
+      let left = rect.left - pad;
+      let top = rect.top - pad;
+      let right = rect.right + pad;
+      let bottom = rect.bottom + pad;
+
+      // If a side sits on the viewport edge, pad=8 would clip the border
+      // (a full-width fixed footer loses left/right/bottom and leaves only a
+      // line through the overlap strip). Inset on those sides so the 3px
+      // stroke stays visible inside the viewport and on the element.
+      if (rect.left <= flush) {
+        left = rect.left + border;
+      }
+      if (rect.top <= flush) {
+        top = rect.top + border;
+      }
+      if (vw - rect.right <= flush) {
+        right = rect.right - border;
+      }
+      if (vh - rect.bottom <= flush) {
+        bottom = rect.bottom - border;
+        // Bottom-flush bar: do not draw above the element — that covers the
+        // overlap that proves the bug.
+        top = rect.top + border;
+      }
+
+      left = Math.max(0, left);
+      top = Math.max(0, top);
+      right = Math.min(vw, right);
+      bottom = Math.min(vh, bottom);
+
       const outline = document.createElement("div");
       outline.style.cssText = [
         "position:fixed",
-        `left:${rect.left - pad}px`,
-        `top:${rect.top - pad}px`,
-        `width:${rect.width + pad * 2}px`,
-        `height:${rect.height + pad * 2}px`,
-        `border:3px solid ${outlineColor}`,
+        `left:${left}px`,
+        `top:${top}px`,
+        `width:${Math.max(border * 2, right - left)}px`,
+        `height:${Math.max(border * 2, bottom - top)}px`,
+        `border:${border}px solid ${outlineColor}`,
         "box-sizing:border-box",
         "pointer-events:none",
         "z-index:2147483646",
@@ -366,7 +401,11 @@ async function writeTerminalFrame(page, tmp, name, transcript, fonts, size) {
 /** Max lines in an excerpt, including the start line. hitTestCenter is 19. */
 const EXCERPT_MAX_LINES = 24;
 
-function extractIndentedBlock(text, startRe, maxLines = EXCERPT_MAX_LINES) {
+function extractIndentedBlock(
+  text,
+  startRe,
+  { maxLines = EXCERPT_MAX_LINES, label = "excerpt" } = {},
+) {
   const lines = text.split("\n");
   const start = lines.findIndex((line) => startRe.test(line));
   if (start < 0) {
@@ -387,14 +426,17 @@ function extractIndentedBlock(text, startRe, maxLines = EXCERPT_MAX_LINES) {
       indent === "" &&
       /^(export\s+)?(async\s+)?function\b/.test(line)
     ) {
-      return "";
+      throw new Error(`${label} excerpt is unterminated`);
     }
     out.push(line);
     if (closers.has(line)) {
       return out.join("\n");
     }
   }
-  return "";
+  if (out.length >= maxLines) {
+    throw new Error(`${label} excerpt exceeded cap`);
+  }
+  throw new Error(`${label} excerpt is unterminated`);
 }
 
 function dedentBlock(block) {
@@ -420,16 +462,39 @@ async function readSource(rel) {
   return readFile(path.join(ROOT, rel), "utf8");
 }
 
+function extractFromTo(text, startRe, endRe, { maxLines = EXCERPT_MAX_LINES, label = "excerpt" } = {}) {
+  const lines = text.split("\n");
+  const start = lines.findIndex((line) => startRe.test(line));
+  if (start < 0) {
+    return "";
+  }
+  const out = [lines[start]];
+  for (let i = start + 1; i < lines.length && out.length < maxLines; i += 1) {
+    out.push(lines[i]);
+    if (endRe.test(lines[i])) {
+      return out.join("\n");
+    }
+  }
+  if (out.length >= maxLines) {
+    throw new Error(`${label} excerpt exceeded cap`);
+  }
+  throw new Error(`${label} excerpt is unterminated`);
+}
+
 async function specExcerpts() {
   const specRel = "tests/fixed-footer-overlap.spec.ts";
   const specText = await readSource(specRel);
-  const testBody = extractIndentedBlock(
+  // Assertion block only — the full test() title is too long to set at a
+  // social-readable size. This is still copied from the spec.
+  const testBody = extractFromTo(
     specText,
-    /test\(\s*"broken:/,
+    /const \{ action, footer, hit, position \}/,
+    /expect\(hit\.hit\?\.id\)\.toBe\("site-footer"\)/,
+    { label: specRel },
   );
   if (testBody.trim().length === 0) {
     throw new Error(
-      `spec excerpt empty: no broken test in ${specRel}`,
+      `spec excerpt empty: no broken-test assertions in ${specRel}`,
     );
   }
   if (!testBody.includes("expect(")) {
@@ -444,7 +509,9 @@ async function specExcerpts() {
   for (const rel of helperFiles) {
     try {
       const text = await readSource(rel);
-      const body = extractIndentedBlock(text, /function hitTestCenter\b/);
+      const body = extractIndentedBlock(text, /function hitTestCenter\b/, {
+        label: "hitTestCenter",
+      });
       if (body.trim().length > 0) {
         helperRel = rel;
         helperBody = body;
@@ -473,7 +540,8 @@ async function specExcerpts() {
 }
 
 async function assertSpecPanesDoNotWrap(page) {
-  const panes = await page.evaluate(() => {
+  const panes = await page.evaluate(async () => {
+    await document.fonts.ready;
     return [...document.querySelectorAll("pre")].map((pre, index) => {
       const text = pre.textContent ?? "";
       const lines = text.split("\n");
@@ -547,13 +615,13 @@ async function writeSpecPng(page, fonts) {
       .pane {
         flex: 1 1 0; min-height: 0; min-width: 0;
         box-sizing: border-box;
-        padding: 12px 20px 8px;
+        padding: 14px 28px 10px;
         border-bottom: 1px solid #374151;
         display: flex; flex-direction: column;
       }
-      .pane:last-child { border-bottom: 0; flex: 1.4 1 0; }
+      .pane:last-child { border-bottom: 0; flex: 1.35 1 0; }
       h2 {
-        margin: 0 0 6px; font: 700 14px/1.2 MonoB, ui-monospace, monospace;
+        margin: 0 0 8px; font: 700 18px/1.2 MonoB, ui-monospace, monospace;
         color: #93c5fd; letter-spacing: 0;
         flex: 0 0 auto;
       }
@@ -561,7 +629,7 @@ async function writeSpecPng(page, fonts) {
         margin: 0;
         flex: 1 1 auto;
         min-height: 0;
-        font: 12px/1.28 Mono, ui-monospace, monospace;
+        font: 18px/1.28 Mono, ui-monospace, monospace;
         white-space: pre;
         overflow: hidden;
       }
@@ -584,6 +652,46 @@ async function writeSpecPng(page, fonts) {
   const dest = path.join(MEDIA, "spec-hit-test.png");
   await page.setViewportSize({ width: W, height: H });
   await page.goto(pathToFileURL(html).href, { waitUntil: "load" });
+  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    const pres = [...document.querySelectorAll("pre")];
+    const min = 15;
+    let size = 22;
+    const fits = (px) => {
+      for (const pre of pres) {
+        pre.style.fontSize = `${px}px`;
+        pre.style.lineHeight = "1.22";
+      }
+      for (const pre of pres) {
+        const cs = getComputedStyle(pre);
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          throw new Error("canvas 2d unavailable");
+        }
+        ctx.font = cs.font;
+        for (const line of (pre.textContent ?? "").split("\n")) {
+          if (ctx.measureText(line).width > pre.clientWidth + 0.5) {
+            return false;
+          }
+        }
+        if (pre.scrollWidth > pre.clientWidth + 1) {
+          return false;
+        }
+        if (pre.scrollHeight > pre.clientHeight + 1) {
+          return false;
+        }
+      }
+      return true;
+    };
+    while (size > min && !fits(size)) {
+      size -= 1;
+    }
+    if (!fits(size)) {
+      throw new Error(`spec excerpt does not fit at ${min}px without wrapping`);
+    }
+  });
   await assertSpecPanesDoNotWrap(page);
   await page.screenshot({
     path: dest,
