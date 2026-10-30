@@ -58,9 +58,11 @@ function unknownKeys(value, allowed) {
   return Object.keys(value).filter((key) => !allowed.has(key));
 }
 
-/** Strip CSI / SGR color codes so Playwright's colored reporter still parses. */
+/** Strip CSI and OSC so Playwright's colored / hyperlinked reporter still parses. */
 function stripAnsi(text) {
-  return text.replace(/\x1B\[[0-9;]*[ -/]*[@-~]/g, "");
+  return text
+    .replace(/\x1B\][^\x07\x1B]*(?:\x07|\x1B\\)/g, "")
+    .replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, "");
 }
 
 function expectAssertionFailed(output) {

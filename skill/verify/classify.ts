@@ -107,11 +107,9 @@ export async function classifyFlexLongText(
   }
 
   const hit = await hitTestCenter(page, "#action");
-  if (
-    overflow <= tolerance &&
-    action.right <= card.right + tolerance &&
-    hit.hit?.id === "action"
-  ) {
+  // overflow already includes horizontalOverflow(action, card) with the same
+  // tolerance, so a separate action.right conjunct is redundant.
+  if (overflow <= tolerance && hit.hit?.id === "action") {
     return {
       caseId: "flex-long-text",
       resembles: "fixed",

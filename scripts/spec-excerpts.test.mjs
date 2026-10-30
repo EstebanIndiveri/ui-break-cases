@@ -8,6 +8,7 @@ import {
   paneFlex,
   SKILL_GEOMETRY_REL,
   specExcerptsFromTexts,
+  stripJsComments,
 } from "./lib/spec-excerpts.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -160,6 +161,71 @@ describe("extractBrokenTest", () => {
     );
   });
 
+  it("does not end the excerpt on a hit expect in the middle of a /* */ block", () => {
+    const specText = specWith(
+      BROKEN_TEST.replace(
+        '    expect(hit.hit?.id).toBe("site-footer");\n',
+        `    /*
+    expect(hit.hit?.id).toBe("site-footer");
+    */
+    expect(hit.hit?.id).toBe("site-footer");
+`,
+      ),
+    );
+    const { assertionBlock } = extractBrokenTest(specText, SPEC_REL);
+    assert.match(assertionBlock, /\/\*/);
+    assert.match(assertionBlock, /\*\/\s*\n\s*expect\(hit\.hit\?\.id\)\.toBe\("site-footer"\)/);
+  });
+
+  it("treats a hit expect only inside a multi-line /* */ as missing", () => {
+    const specText = specWith(
+      BROKEN_TEST.replace(
+        '    expect(hit.hit?.id).toBe("site-footer");\n',
+        `    /*
+    expect(hit.hit?.id).toBe("site-footer");
+    */
+`,
+      ),
+    );
+    assert.throws(
+      () => extractBrokenTest(specText, SPEC_REL),
+      /missing expect\(hit\.hit\?\.id\)\.toBe\("site-footer"\)/,
+    );
+  });
+
+  it("still finds overlapHeight after a string that looks like a comment", () => {
+    const specText = specWith(
+      BROKEN_TEST.replace(
+        "    expect(position).toBe(\"fixed\");\n",
+        '    const decoy = "// ";\n    expect(position).toBe("fixed");\n',
+      ),
+    );
+    const { assertionBlock } = extractBrokenTest(specText, SPEC_REL);
+    assert.match(assertionBlock, /expect\(\s*overlapHeight/);
+  });
+
+  it("still finds overlapHeight after a template with nested backticks in ${}", () => {
+    const specText = specWith(
+      BROKEN_TEST.replace(
+        "    expect(position).toBe(\"fixed\");\n",
+        "    const decoy = `// ${`/* */`} `;\n    expect(position).toBe(\"fixed\");\n",
+      ),
+    );
+    const { assertionBlock } = extractBrokenTest(specText, SPEC_REL);
+    assert.match(assertionBlock, /expect\(\s*overlapHeight/);
+  });
+
+  it("still finds overlapHeight after a regex literal that looks like a comment", () => {
+    const specText = specWith(
+      BROKEN_TEST.replace(
+        "    expect(position).toBe(\"fixed\");\n",
+        "    const decoy = /[/*]/;\n    expect(position).toBe(\"fixed\");\n",
+      ),
+    );
+    const { assertionBlock } = extractBrokenTest(specText, SPEC_REL);
+    assert.match(assertionBlock, /expect\(\s*overlapHeight/);
+  });
+
   it("says the hit expect is missing instead of exceeded cap", () => {
     const padding = Array.from(
       { length: 30 },
@@ -244,6 +310,36 @@ describe("hitTestCenter excerpt errors", () => {
     assert.equal(result.right.title, "skill/lib/geometry.ts (excerpt)");
     assert.match(result.right.body, /elementFromPoint/);
     assert.match(result.right.body, /Hit \| null/);
+  });
+});
+
+describe("stripJsComments", () => {
+  it("does not treat // inside a string as a comment", () => {
+    const src = 'const s = "// expect(overlapHeight";\nexpect(overlapHeight(a, b));\n';
+    const out = stripJsComments(src);
+    assert.match(out, /const s = "\/\/ expect\(overlapHeight"/);
+    assert.match(out, /expect\(overlapHeight\(a, b\)\)/);
+  });
+
+  it("does not treat comment markers inside a template, including backticks in ${}", () => {
+    const src = "const s = `// ${`/* still not */`} expect(overlapHeight`;\nexpect(overlapHeight(a, b));\n";
+    const out = stripJsComments(src);
+    assert.match(out, /\/\* still not \*\//);
+    assert.match(out, /expect\(overlapHeight\(a, b\)\)/);
+  });
+
+  it("does not treat comment markers inside a regex literal as comments", () => {
+    const src = "const re = /[/*] expect(overlapHeight)/;\nexpect(overlapHeight(a, b));\n";
+    const out = stripJsComments(src);
+    assert.ok(out.includes("[/*] expect(overlapHeight)"));
+    assert.ok(out.includes("expect(overlapHeight(a, b))"));
+  });
+
+  it("still strips a real commented-out expect", () => {
+    const src = "// expect(overlapHeight(action, footer));\nconst x = 1;\n";
+    const out = stripJsComments(src);
+    assert.doesNotMatch(out, /expect\(overlapHeight/);
+    assert.match(out, /const x = 1/);
   });
 });
 

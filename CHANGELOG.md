@@ -2,9 +2,10 @@
 
 ## Unreleased
 
-- Scorer: strip ANSI from `specOutput` before parsing; prompt asks for `NO_COLOR=1` when capturing Playwright output.
-- Launch excerpt: ignore commented-out `expect(overlapHeight…)` anchors, and say the hit `expect` is missing instead of `exceeded cap`.
-- Classifier tests: kill remaining bottom-tolerance-0 mutants (N10, N13–N16, N20, N23) and the leftover v0.2 gates (`nextClear`, `action.right`, `rects`, `clip`, `localScroll`, `next-content`). Dropping `action.right` from the flex **fixed** gate is equivalent to `overflow <= tolerance` (documented, not forced). `node scripts/mutate-classify.mjs` reruns that set.
+- Scorer: strip CSI and OSC (hyperlinks) from `specOutput` before parsing; prompt asks for `NO_COLOR=1` when capturing Playwright output.
+- Launch excerpt: ignore commented-out `expect` anchors, including an expect on a middle line of a `/* */` block; do not treat comment-like text inside strings, templates, or regex literals as comments; say the hit `expect` is missing instead of `exceeded cap`.
+- Classifier: drop the redundant `action.right` conjunct from the flex fixed gate (`overflow` already includes it). Tests kill remaining bottom-tolerance-0 mutants (N10, N13–N16, N20, N23) and the leftover v0.2 gates (`nextClear`, `action.right`, `rects`, `clip`, `localScroll`, `next-content`).
+- `npm run mutate:classify`: report killed vs timeout vs error separately, fail if a declared-equivalent mutant dies, restore `classify.ts` on SIGINT/SIGTERM.
 - Docs: drop the stale “while bc-170139f1 is running” line; stop leaking the blind-run-2 p01 answer; do not reuse that set for Claude Code or Codex.
 
 ## v0.2.0 — 2026-10-29

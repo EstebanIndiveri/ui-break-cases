@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
  * Apply the issue #8 classify.ts mutants one at a time and run
- * tests/agent-skill.spec.ts. Prints killed / alive / error per mutant.
+ * tests/agent-skill.spec.ts. Prints killed / alive / timeout / error.
  *
  * Usage: node scripts/mutate-classify.mjs
  */
 import { spawn } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +17,9 @@ const TARGET = path.join(ROOT, "skill/verify/classify.ts");
 /**
  * Mutants named in issue #8. Each `find` must occur exactly once.
  * "alive" means agent-skill.spec.ts still passes after the edit.
+ * "killed" means Playwright ran and a test assertion failed.
+ * "timeout" means Playwright ran and failed only on test timeouts.
+ * "error" means the suite did not run (build / spawn / other).
  */
 export const MUTANTS = [
   {
@@ -76,17 +80,6 @@ export const MUTANTS = [
     replace: "isClearFlexOverflow(overflow, card.right, card.right, threshold)",
   },
   {
-    id: "action.right-fixed",
-    name: "drop action.right from the flex fixed gate",
-    equivalent:
-      "overflow already includes horizontalOverflow(action, card), so overflow <= tolerance implies action.right <= card.right + tolerance",
-    find: `    overflow <= tolerance &&
-    action.right <= card.right + tolerance &&
-    hit.hit?.id === "action"`,
-    replace: `    overflow <= tolerance &&
-    hit.hit?.id === "action"`,
-  },
-  {
     id: "rects",
     name: "drop clip.rects.length > 1 from broken label",
     find: `    clip.rects.length > 1 &&
@@ -137,6 +130,20 @@ export const MUTANTS = [
   },
 ];
 
+let originalSource = null;
+
+function restoreSync() {
+  if (originalSource == null) {
+    return;
+  }
+  try {
+    writeFileSync(TARGET, originalSource);
+  } catch (error) {
+    console.error("Failed to restore skill/verify/classify.ts");
+    console.error(error instanceof Error ? error.message : error);
+  }
+}
+
 function applyMutant(source, mutant) {
   const count = source.split(mutant.find).length - 1;
   if (count !== 1) {
@@ -171,77 +178,162 @@ function runPlaywright() {
     child.stderr.on("data", (chunk) => {
       stderr += chunk;
     });
+    child.on("error", (error) => {
+      resolve({
+        code: 1,
+        stdout,
+        stderr: `${stderr}\n${error instanceof Error ? error.message : error}`,
+      });
+    });
     child.on("close", (code) => {
       resolve({ code: code ?? 1, stdout, stderr });
     });
   });
 }
 
-function summarize(result) {
+function firstUsefulLine(text) {
+  return (
+    text
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0) ?? "non-zero exit"
+  );
+}
+
+function classifyRun(result) {
   const text = `${result.stdout}\n${result.stderr}`;
-  const failed = text.match(/(\d+) failed/);
-  const passed = text.match(/(\d+) passed/);
+  const failedMatch = text.match(/(\d+) failed/);
+  const passedMatch = text.match(/(\d+) passed/);
+  const failed = failedMatch ? Number(failedMatch[1]) : 0;
+  const passed = passedMatch ? Number(passedMatch[1]) : 0;
+  const ran =
+    /Running \d+ tests/.test(text) || failedMatch != null || passedMatch != null;
+  const timedOut =
+    /Test timeout of \d+ms/i.test(text) ||
+    /Timeout of \d+ms exceeded/i.test(text) ||
+    /timed out/i.test(text);
+  const assertionFail = /Error:\s*expect\(received\)/.test(text);
+
+  if (result.code === 0) {
+    return {
+      status: "ALIVE",
+      detail: `${passed} passed`,
+      passed,
+      failed,
+    };
+  }
+  if (!ran) {
+    return {
+      status: "error",
+      detail: firstUsefulLine(text).slice(0, 200),
+      passed,
+      failed,
+    };
+  }
+  if (timedOut && !assertionFail) {
+    return {
+      status: "timeout",
+      detail: `${failed} failed, ${passed} passed (timeout)`,
+      passed,
+      failed,
+    };
+  }
+  if (failed > 0 || assertionFail) {
+    return {
+      status: "killed",
+      detail: `${failed} failed, ${passed} passed`,
+      passed,
+      failed,
+    };
+  }
   return {
-    code: result.code,
-    passed: passed ? Number(passed[1]) : 0,
-    failed: failed ? Number(failed[1]) : result.code === 0 ? 0 : 1,
+    status: "error",
+    detail: `exit ${result.code}: ${firstUsefulLine(text).slice(0, 180)}`,
+    passed,
+    failed,
   };
 }
 
 async function main() {
-  const original = await readFile(TARGET, "utf8");
+  originalSource = await readFile(TARGET, "utf8");
   const rows = [];
   try {
     for (const mutant of MUTANTS) {
       process.stdout.write(`${mutant.id.padEnd(22)} ${mutant.name} … `);
       let source;
       try {
-        source = applyMutant(original, mutant);
+        source = applyMutant(originalSource, mutant);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.log(`ERROR  ${message}`);
-        rows.push({ id: mutant.id, name: mutant.name, status: "error", detail: message });
+        rows.push({
+          id: mutant.id,
+          name: mutant.name,
+          status: "error",
+          detail: message,
+          equivalent: Boolean(mutant.equivalent),
+        });
         continue;
       }
       await writeFile(TARGET, source);
       const result = await runPlaywright();
-      await writeFile(TARGET, original);
-      const summary = summarize(result);
-      const status =
-        summary.code === 0
-          ? mutant.equivalent
-            ? "equiv"
-            : "ALIVE"
-          : "killed";
-      const detail =
-        summary.code === 0
-          ? mutant.equivalent
-            ? mutant.equivalent
-            : `${summary.passed} passed`
-          : `${summary.failed} failed, ${summary.passed} passed`;
+      await writeFile(TARGET, originalSource);
+      const summary = classifyRun(result);
+      let status = summary.status;
+      let detail = summary.detail;
+      if (result.code === 0 && mutant.equivalent) {
+        status = "equiv";
+        detail = mutant.equivalent;
+      } else if (mutant.equivalent && status !== "ALIVE") {
+        console.log(
+          `FAIL   declared equivalent but ${status}: ${detail}`,
+        );
+        rows.push({
+          id: mutant.id,
+          name: mutant.name,
+          status: "error",
+          detail: `declared equivalent but ${status}: ${detail}`,
+          equivalent: true,
+        });
+        continue;
+      }
       console.log(`${status.padEnd(6)} ${detail}`);
       rows.push({
         id: mutant.id,
         name: mutant.name,
         status,
         detail,
+        equivalent: Boolean(mutant.equivalent),
       });
     }
   } finally {
-    await writeFile(TARGET, original);
+    restoreSync();
   }
 
   const alive = rows.filter((row) => row.status === "ALIVE");
   const equiv = rows.filter((row) => row.status === "equiv");
   const killed = rows.filter((row) => row.status === "killed");
+  const timeouts = rows.filter((row) => row.status === "timeout");
   const errors = rows.filter((row) => row.status === "error");
   console.log(
-    `\n${killed.length} killed, ${alive.length} alive, ${equiv.length} equivalent, ${errors.length} error (of ${rows.length})`,
+    `\n${killed.length} killed, ${alive.length} alive, ${timeouts.length} timeout, ${errors.length} error, ${equiv.length} equivalent (of ${rows.length})`,
   );
   if (alive.length > 0) {
     console.log("Alive:");
     for (const row of alive) {
       console.log(`  ${row.id}  ${row.name}`);
+    }
+  }
+  if (timeouts.length > 0) {
+    console.log("Timeout:");
+    for (const row of timeouts) {
+      console.log(`  ${row.id}  ${row.detail}`);
+    }
+  }
+  if (errors.length > 0) {
+    console.log("Error:");
+    for (const row of errors) {
+      console.log(`  ${row.id}  ${row.detail}`);
     }
   }
   if (equiv.length > 0) {
@@ -250,7 +342,7 @@ async function main() {
       console.log(`  ${row.id}  ${row.detail}`);
     }
   }
-  if (alive.length > 0 || errors.length > 0) {
+  if (alive.length > 0 || timeouts.length > 0 || errors.length > 0) {
     process.exitCode = 1;
   }
 }
@@ -258,7 +350,16 @@ async function main() {
 const isDirectRun =
   fileURLToPath(import.meta.url) === path.resolve(process.argv[1] ?? "");
 if (isDirectRun) {
-  main().catch(async (error) => {
+  process.on("SIGINT", () => {
+    restoreSync();
+    process.exit(130);
+  });
+  process.on("SIGTERM", () => {
+    restoreSync();
+    process.exit(143);
+  });
+  main().catch((error) => {
+    restoreSync();
     console.error(error);
     process.exit(1);
   });

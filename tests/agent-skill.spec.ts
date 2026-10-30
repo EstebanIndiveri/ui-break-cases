@@ -681,14 +681,6 @@ test.describe("agent-skill surviving mutants", () => {
     expect(classified?.bug ?? false).toBe(false);
   });
 
-  /**
-   * Equivalent mutant: dropping `action.right <= card.right + tolerance`
-   * from the flex **fixed** gate. `overflow` already includes
-   * `horizontalOverflow(action, card)`, which is `>= action.right - card.right`
-   * when the action sticks out to the right, so `overflow <= tolerance`
-   * implies that conjunct. Issue #8 asked not to force a test for it.
-   */
-
   test("N10 nextClear bottom tolerance 0 dies: 2px of next overlap is still fixed at 4px, not at 0", async ({
     page,
   }) => {
