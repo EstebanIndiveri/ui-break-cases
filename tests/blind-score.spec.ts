@@ -92,6 +92,50 @@ test.describe("blind score.mjs", () => {
     expect(result.stdout).toMatch(/missing spec that fails via expect/);
   });
 
+  test("OSC hyperlink wrapping Error: expect(received) still parses as a real failure", async () => {
+    const linked = [
+      "    \x1b]8;;https://example.test/spec\x07Error: expect(received).toBeLessThanOrEqual(expected)\x1b]8;;\x07",
+      "",
+      "    Expected: <= 4",
+      "    Received:    80",
+      "",
+      "        at /tmp/flex-long-text.spec.ts:42:22",
+      "",
+      "  \x1b]8;;https://example.test/failed\x1b\\1 failed\x1b]8;;\x1b\\",
+      "",
+    ].join("\n");
+    const { mappingPath, resultsPath } = await writePair({
+      "p01.html": {
+        matches: [brokenMatch({ specOutput: linked })],
+      },
+    });
+    const result = await runScore(mappingPath, resultsPath);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toMatch(/^PASS/m);
+  });
+
+  test("ANSI-colored Playwright specOutput still parses as a real failure", async () => {
+    const colored = [
+      "    \x1b[31mError:\x1b[39m expect(\x1b[31mreceived\x1b[39m).toBeLessThanOrEqual(expected)",
+      "",
+      "    \x1b[32mExpected:\x1b[39m <= 4",
+      "    \x1b[31mReceived:\x1b[39m    80",
+      "",
+      "        at /tmp/flex-long-text.spec.ts:42:22",
+      "",
+      "  \x1b[31m1 failed\x1b[39m",
+      "",
+    ].join("\n");
+    const { mappingPath, resultsPath } = await writePair({
+      "p01.html": {
+        matches: [brokenMatch({ specOutput: colored })],
+      },
+    });
+    const result = await runScore(mappingPath, resultsPath);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toMatch(/^PASS/m);
+  });
+
   test("Playwright N failed + expect() block + at file:line passes", async () => {
     const { mappingPath, resultsPath } = await writePair({
       "p01.html": {

@@ -413,20 +413,20 @@ function isMissingFile(error) {
 async function specExcerpts() {
   const specRel = "tests/fixed-footer-overlap.spec.ts";
   const specText = await readSource(specRel);
-  const helperFiles = ["skill/lib/geometry.ts"];
-  const helpers = [];
-  for (const rel of helperFiles) {
-    try {
-      helpers.push({ rel, text: await readSource(rel) });
-    } catch (error) {
-      if (isMissingFile(error)) {
-        helpers.push({ rel, text: null });
-        continue;
-      }
+  const helperRel = "skill/lib/geometry.ts";
+  let helperText = null;
+  try {
+    helperText = await readSource(helperRel);
+  } catch (error) {
+    if (!isMissingFile(error)) {
       throw error;
     }
   }
-  return specExcerptsFromTexts({ specRel, specText, helpers });
+  return specExcerptsFromTexts({
+    specRel,
+    specText,
+    helpers: [{ rel: helperRel, text: helperText }],
+  });
 }
 
 async function assertSpecPanesDoNotWrap(page) {

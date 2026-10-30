@@ -4,6 +4,215 @@ export const EXCERPT_MAX_LINES = 24;
 const BROKEN_TEST_START = /test\(\s*(['"`])broken:/;
 const BROKEN_TEST_TITLE = /test\(\s*(["'`])(broken:[\s\S]*?)\1/;
 const OVERLAP_EXPECT = /expect\(\s*overlapHeight\b/;
+const HIT_FOOTER_EXPECT = /expect\(\s*hit\.hit\?\.id\)\.toBe\(\s*(['"])site-footer\1\s*\)/;
+
+const REGEX_AFTER_KEYWORD =
+  /^(?:return|throw|case|typeof|void|delete|await|yield|in|of|else|do|new)$/;
+
+/**
+ * Strip // and /* *\/ comments so a commented-out expect is not an anchor.
+ * Strings, template literals (including nested `${}` / backticks), and regex
+ * literals are copied through so `//` or `/*` inside them is not a comment.
+ * Newlines inside comments are kept so line indices still line up.
+ */
+export function stripJsComments(source) {
+  const out = [];
+  const stack = [{ kind: "code", braces: 0, canRegex: true, inClass: false }];
+  let i = 0;
+
+  const parent = () => stack[stack.length - 1];
+  const setCanRegex = (value) => {
+    const frame = parent();
+    if (frame.kind === "code") {
+      frame.canRegex = value;
+    }
+  };
+
+  while (i < source.length) {
+    const frame = parent();
+    const c = source[i];
+    const n = source[i + 1];
+
+    if (frame.kind === "line") {
+      if (c === "\n" || c === "\r") {
+        stack.pop();
+        out.push(c);
+      }
+      i += 1;
+      continue;
+    }
+    if (frame.kind === "block") {
+      if (c === "*" && n === "/") {
+        stack.pop();
+        i += 2;
+        continue;
+      }
+      if (c === "\n" || c === "\r") {
+        out.push(c);
+      }
+      i += 1;
+      continue;
+    }
+    if (frame.kind === "squote" || frame.kind === "dquote") {
+      out.push(c);
+      if (c === "\\" && i + 1 < source.length) {
+        out.push(source[i + 1]);
+        i += 2;
+        continue;
+      }
+      if (c === (frame.kind === "squote" ? "'" : '"')) {
+        stack.pop();
+        setCanRegex(false);
+      }
+      i += 1;
+      continue;
+    }
+    if (frame.kind === "template") {
+      out.push(c);
+      if (c === "\\" && i + 1 < source.length) {
+        out.push(source[i + 1]);
+        i += 2;
+        continue;
+      }
+      if (c === "`") {
+        stack.pop();
+        setCanRegex(false);
+        i += 1;
+        continue;
+      }
+      if (c === "$" && n === "{") {
+        out.push("{");
+        stack.push({ kind: "code", braces: 1, canRegex: true, inClass: false });
+        i += 2;
+        continue;
+      }
+      i += 1;
+      continue;
+    }
+    if (frame.kind === "regex") {
+      out.push(c);
+      if (c === "\\" && i + 1 < source.length) {
+        out.push(source[i + 1]);
+        i += 2;
+        continue;
+      }
+      if (c === "[" && !frame.inClass) {
+        frame.inClass = true;
+        i += 1;
+        continue;
+      }
+      if (c === "]" && frame.inClass) {
+        frame.inClass = false;
+        i += 1;
+        continue;
+      }
+      if (c === "/" && !frame.inClass) {
+        stack.pop();
+        i += 1;
+        while (i < source.length && /[A-Za-z]/.test(source[i])) {
+          out.push(source[i]);
+          i += 1;
+        }
+        setCanRegex(false);
+        continue;
+      }
+      i += 1;
+      continue;
+    }
+
+    if (c === "/" && n === "/") {
+      stack.push({ kind: "line", braces: 0, canRegex: false, inClass: false });
+      i += 2;
+      continue;
+    }
+    if (c === "/" && n === "*") {
+      stack.push({ kind: "block", braces: 0, canRegex: false, inClass: false });
+      i += 2;
+      continue;
+    }
+    if (c === "/" && frame.canRegex) {
+      out.push(c);
+      stack.push({ kind: "regex", braces: 0, canRegex: false, inClass: false });
+      i += 1;
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      out.push(c);
+      stack.push({
+        kind: c === "'" ? "squote" : "dquote",
+        braces: 0,
+        canRegex: false,
+        inClass: false,
+      });
+      i += 1;
+      continue;
+    }
+    if (c === "`") {
+      out.push(c);
+      stack.push({ kind: "template", braces: 0, canRegex: false, inClass: false });
+      i += 1;
+      continue;
+    }
+    if (c === "{") {
+      out.push(c);
+      frame.braces += 1;
+      frame.canRegex = true;
+      i += 1;
+      continue;
+    }
+    if (c === "}") {
+      out.push(c);
+      if (frame.braces > 0) {
+        frame.braces -= 1;
+      }
+      if (
+        frame.braces === 0 &&
+        stack.length > 1 &&
+        stack[stack.length - 2].kind === "template"
+      ) {
+        stack.pop();
+        i += 1;
+        continue;
+      }
+      frame.canRegex = true;
+      i += 1;
+      continue;
+    }
+
+    if (/[A-Za-z_$]/.test(c)) {
+      let word = c;
+      i += 1;
+      while (i < source.length && /[A-Za-z0-9_$]/.test(source[i])) {
+        word += source[i];
+        i += 1;
+      }
+      out.push(word);
+      frame.canRegex = REGEX_AFTER_KEYWORD.test(word);
+      continue;
+    }
+    if (/[0-9]/.test(c)) {
+      out.push(c);
+      frame.canRegex = false;
+      i += 1;
+      continue;
+    }
+
+    out.push(c);
+    if (/\s/.test(c)) {
+      // whitespace does not change canRegex
+    } else if (c === ")" || c === "]" || c === ".") {
+      frame.canRegex = false;
+    } else {
+      frame.canRegex = true;
+    }
+    i += 1;
+  }
+  return out.join("");
+}
+
+function hasActiveMatch(source, re) {
+  return re.test(stripJsComments(source));
+}
 
 export function extractIndentedBlock(
   text,
@@ -50,14 +259,22 @@ export function extractFromTo(
   { maxLines = EXCERPT_MAX_LINES, label = "excerpt" } = {},
 ) {
   const lines = text.split("\n");
-  const start = lines.findIndex((line) => startRe.test(line));
+  const activeLines = stripJsComments(text).split("\n");
+  const start = activeLines.findIndex((line) => startRe.test(line));
   if (start < 0) {
     return "";
   }
-  const out = [lines[start]];
+  const restActive = activeLines.slice(start).join("\n");
+  if (!endRe.test(restActive)) {
+    const expectHint = /expect\(/.test(String(endRe))
+      ? `missing the closing expect (${endRe})`
+      : `missing the excerpt end (${endRe})`;
+    throw new Error(`${label} excerpt ${expectHint}`);
+  }
+  const out = [lines[start] ?? ""];
   for (let i = start + 1; i < lines.length && out.length < maxLines; i += 1) {
     out.push(lines[i]);
-    if (endRe.test(lines[i])) {
+    if (endRe.test(activeLines[i] ?? "")) {
       return out.join("\n");
     }
   }
@@ -102,22 +319,30 @@ export function extractBrokenTest(specText, specRel = "spec") {
 
   const block = extractIndentedBlock(specText, BROKEN_TEST_START, {
     label: `${specRel} broken test`,
+    // Large enough to close the test so a missing expect is reported
+    // as missing, not as "exceeded cap".
+    maxLines: 200,
   });
   if (!block.trim()) {
     throw new Error(
       `spec excerpt empty: no test("broken: …") in ${specRel}`,
     );
   }
-  if (!OVERLAP_EXPECT.test(block)) {
+  if (!hasActiveMatch(block, OVERLAP_EXPECT)) {
     throw new Error(
       `spec excerpt for ${specRel} is missing expect(overlapHeight…) in the broken test`,
+    );
+  }
+  if (!hasActiveMatch(block, HIT_FOOTER_EXPECT)) {
+    throw new Error(
+      `spec excerpt for ${specRel} is missing expect(hit.hit?.id).toBe("site-footer") in the broken test`,
     );
   }
 
   const assertionBlock = extractFromTo(
     block,
     /const \{ action, footer, hit, position \}/,
-    /expect\(hit\.hit\?\.id\)\.toBe\("site-footer"\)/,
+    HIT_FOOTER_EXPECT,
     { label: specRel },
   );
   if (!assertionBlock.trim()) {
@@ -125,7 +350,7 @@ export function extractBrokenTest(specText, specRel = "spec") {
       `spec excerpt empty: no broken-test assertions in ${specRel}`,
     );
   }
-  if (!OVERLAP_EXPECT.test(assertionBlock)) {
+  if (!hasActiveMatch(assertionBlock, OVERLAP_EXPECT)) {
     throw new Error(
       `spec excerpt for ${specRel} is missing expect(overlapHeight…) in the broken test`,
     );

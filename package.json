@@ -17,6 +17,7 @@
     "test": "node --test scripts/spec-excerpts.test.mjs && playwright test",
     "check:pages": "node scripts/check-pages.mjs",
     "verify:skill": "node scripts/verify-agent-skill.mjs",
+    "mutate:classify": "node scripts/mutate-classify.mjs",
     "check:skill-copies": "node scripts/check-skill-copies.mjs",
     "capture:demo": "node scripts/capture-readme-gif.mjs",
     "capture:launch": "node scripts/capture-launch-media.mjs",
