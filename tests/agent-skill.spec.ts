@@ -473,7 +473,7 @@ test.describe("agent-skill surviving mutants", () => {
     expect(classified?.bug ?? false).toBe(false);
   });
 
-  test("label clip threshold dies: 8px of clip is not broken", async ({
+  test("N23 label clip threshold dies: 8px of clip is not broken", async ({
     page,
   }) => {
     const spec = getCase("fixed-height-label");
@@ -679,6 +679,298 @@ test.describe("agent-skill surviving mutants", () => {
     const classified = await classifyFixedHeightLabel(page);
     expect(classified?.resembles).not.toBe("broken");
     expect(classified?.bug ?? false).toBe(false);
+  });
+
+  /**
+   * Equivalent mutant: dropping `action.right <= card.right + tolerance`
+   * from the flex **fixed** gate. `overflow` already includes
+   * `horizontalOverflow(action, card)`, which is `>= action.right - card.right`
+   * when the action sticks out to the right, so `overflow <= tolerance`
+   * implies that conjunct. Issue #8 asked not to force a test for it.
+   */
+
+  test("N10 nextClear bottom tolerance 0 dies: 2px of next overlap is still fixed at 4px, not at 0", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    await page.locator("#next-content").evaluate((node) => {
+      (node as HTMLElement).style.marginTop = "0";
+      (node as HTMLElement).style.position = "relative";
+      (node as HTMLElement).style.top = "-2px";
+    });
+    const label = await boundingRect(page, "#label");
+    const next = await boundingRect(page, "#next-content");
+    expect(label.bottom - next.top).toBeGreaterThan(0);
+    expect(label.bottom - next.top).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).toBe("fixed");
+  });
+
+  test("N13 clippedBottom tolerance 0 dies: 2px of visible spill is still fixed at 4px, not at 0", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    const natural = await page.locator("#label").evaluate((node) => {
+      return node.getBoundingClientRect().height;
+    });
+    await page.locator("#label").evaluate((node, height) => {
+      const el = node as HTMLElement;
+      el.style.overflow = "visible";
+      el.style.height = `${height}px`;
+    }, natural - 2);
+    const clip = await textRangeClip(page, "#label");
+    expect(overflowIsHidden(clip)).toBe(false);
+    expect(clip.clippedBottom).toBeGreaterThan(0);
+    expect(clip.clippedBottom).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).toBe("fixed");
+  });
+
+  test("N14 clippedRight tolerance 0 dies: 2px of visible right spill is still fixed at 4px, not at 0", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    await page.locator("#label").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.style.overflow = "visible";
+      el.style.whiteSpace = "nowrap";
+      el.style.width = `${Math.max(8, el.scrollWidth - 2)}px`;
+    });
+    const clip = await textRangeClip(page, "#label");
+    expect(overflowIsHidden(clip)).toBe(false);
+    expect(clip.clippedRight).toBeGreaterThan(0);
+    expect(clip.clippedRight).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).toBe("fixed");
+  });
+
+  test("N15 footer bottom tolerance 0 dies: 2px of action/footer slack is still fixed at 4px, not at 0", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-footer-overlap");
+    if (!spec) {
+      throw new Error("fixed-footer-overlap missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    await page.evaluate(() => {
+      const main = document.querySelector("main");
+      if (main instanceof HTMLElement) {
+        main.style.paddingBottom = "70px";
+      }
+    });
+    await scrollToDocumentEnd(page);
+    const action = await boundingRect(page, "#last-action");
+    const footer = await boundingRect(page, "#site-footer");
+    const overlap = overlapHeight(action, footer);
+    const hit = await hitTestCenter(page, "#last-action");
+    expect(overlap).toBeGreaterThan(0);
+    expect(overlap).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);
+    expect(action.bottom).toBeGreaterThan(footer.top);
+    expect(action.bottom).toBeLessThanOrEqual(footer.top + GEOM_TOLERANCE_PX);
+    expect(hit.hit?.id).toBe("last-action");
+    const classified = await classifyFixedFooterOverlap(page);
+    expect(classified?.resembles).toBe("fixed");
+  });
+
+  test("N16 spacer height tolerance 0 dies: spacer 2px short of the footer is still control at 4px, not at 0", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-footer-overlap");
+    if (!spec) {
+      throw new Error("fixed-footer-overlap missing");
+    }
+    await openFixture(page, spec.variants.control.path, spec.viewport);
+    const footer = await boundingRect(page, "#site-footer");
+    await page.locator(".spacer").evaluate((node, height) => {
+      (node as HTMLElement).style.height = `${height}px`;
+    }, footer.height - 2);
+    const spacer = await boundingRect(page, ".spacer");
+    expect(footer.height - spacer.height).toBeGreaterThan(0);
+    expect(footer.height - spacer.height).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);
+    const classified = await classifyFixedFooterOverlap(page);
+    expect(classified?.resembles).toBe("control");
+  });
+
+  test("N20 control clippedBottom threshold 0 dies: 8px of clip with a painted expand is not control", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.control.path, spec.viewport);
+    await page.locator("#label").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.style.height = "auto";
+      el.style.overflow = "hidden";
+      const full = el.scrollHeight;
+      el.style.height = `${Math.max(8, full - 8)}px`;
+    });
+    const clip = await textRangeClip(page, "#label");
+    expect(overflowIsHidden(clip)).toBe(true);
+    expect(clip.clippedBottom).toBeGreaterThan(GEOM_TOLERANCE_PX);
+    expect(clip.clippedBottom).toBeLessThanOrEqual(CLEAR_DEFECT_PX);
+    expect(await isPainted(page, "#expand-toggle")).toBe(true);
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).not.toBe("control");
+  });
+
+  test("clip dies: 10px of visible bottom spill is not fixed", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    const natural = await page.locator("#label").evaluate((node) => {
+      return node.getBoundingClientRect().height;
+    });
+    await page.locator("#label").evaluate((node, height) => {
+      const el = node as HTMLElement;
+      el.style.overflow = "visible";
+      el.style.height = `${height}px`;
+    }, natural - 10);
+    const clip = await textRangeClip(page, "#label");
+    expect(overflowIsHidden(clip)).toBe(false);
+    expect(clip.clippedBottom).toBeGreaterThan(GEOM_TOLERANCE_PX);
+    expect(clip.clippedBottom).toBeLessThanOrEqual(CLEAR_DEFECT_PX);
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).not.toBe("fixed");
+  });
+
+  test("action.right dies: token overflow with the action inside the card is not broken", async ({
+    page,
+  }) => {
+    const spec = getCase("flex-long-text");
+    if (!spec) {
+      throw new Error("flex-long-text missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    await page.locator("#long-text").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.style.display = "inline-block";
+      el.style.position = "relative";
+      el.style.left = "80px";
+      el.style.whiteSpace = "nowrap";
+    });
+    const card = await boundingRect(page, "#card");
+    const text = await boundingRect(page, "#long-text");
+    const action = await boundingRect(page, "#action");
+    expect(horizontalOverflow(text, card)).toBeGreaterThan(CLEAR_DEFECT_PX);
+    expect(action.right).toBeLessThanOrEqual(card.right + GEOM_TOLERANCE_PX);
+    const classified = await classifyFlexLongText(page);
+    expect(classified?.resembles).not.toBe("broken");
+    expect(classified?.bug ?? false).toBe(false);
+  });
+
+  test("nextClear dies: overlapping #next-content is not fixed", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    await page.locator("#next-content").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.style.marginTop = "0";
+      el.style.position = "relative";
+      el.style.top = "-24px";
+    });
+    const label = await boundingRect(page, "#label");
+    const next = await boundingRect(page, "#next-content");
+    expect(label.bottom - next.top).toBeGreaterThan(CLEAR_DEFECT_PX);
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).not.toBe("fixed");
+  });
+
+  test("rects dies: a single client rect clipped by more than 16px is not broken", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.broken.path, spec.viewport);
+    await page.locator("#label").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.style.whiteSpace = "nowrap";
+      el.style.lineHeight = "24px";
+      el.style.height = "4px";
+      el.style.overflow = "hidden";
+    });
+    const clip = await textRangeClip(page, "#label");
+    expect(clip.rects.length).toBe(1);
+    expect(overflowIsHidden(clip)).toBe(true);
+    expect(clip.clippedBottom).toBeGreaterThan(CLEAR_DEFECT_PX);
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).not.toBe("broken");
+    expect(classified?.bug ?? false).toBe(false);
+  });
+
+  test("localScroll CLEAR_DEFECT_PX → 0 dies: 8px of code-block scroll is not control", async ({
+    page,
+  }) => {
+    const spec = getCase("flex-long-text");
+    if (!spec) {
+      throw new Error("flex-long-text missing");
+    }
+    await openFixture(page, spec.variants.control.path, spec.viewport);
+    await page.locator("#code-block").evaluate((node) => {
+      const el = node as HTMLElement;
+      el.style.padding = "0";
+      el.style.border = "0";
+      el.style.width = "200px";
+      el.style.maxWidth = "200px";
+      el.style.boxSizing = "content-box";
+      el.style.overflowX = "auto";
+      el.style.whiteSpace = "nowrap";
+      el.replaceChildren();
+      const inner = document.createElement("span");
+      inner.id = "long-text";
+      inner.style.display = "inline-block";
+      inner.style.width = "208px";
+      inner.textContent = "x";
+      el.append(inner);
+    });
+    const metrics = await scrollMetrics(page, "#code-block");
+    const extra = metrics.scrollWidth - metrics.clientWidth;
+    expect(extra).toBeGreaterThan(0);
+    expect(extra).toBeLessThanOrEqual(CLEAR_DEFECT_PX);
+    const classified = await classifyFlexLongText(page);
+    expect(classified?.resembles).not.toBe("control");
+  });
+
+  test("next-content dies: a readable label without #next-content is still fixed", async ({
+    page,
+  }) => {
+    const spec = getCase("fixed-height-label");
+    if (!spec) {
+      throw new Error("fixed-height-label missing");
+    }
+    await openFixture(page, spec.variants.fixed.path, spec.viewport);
+    await page.locator("#next-content").evaluate((node) => {
+      node.remove();
+    });
+    expect(await page.locator("#next-content").count()).toBe(0);
+    const clip = await textRangeClip(page, "#label");
+    expect(overflowIsHidden(clip)).toBe(false);
+    expect(clip.clippedBottom).toBeLessThanOrEqual(GEOM_TOLERANCE_PX);
+    const classified = await classifyFixedHeightLabel(page);
+    expect(classified?.resembles).toBe("fixed");
   });
 
   test("N12 hidden overflow with fitting text is not fixed", async ({

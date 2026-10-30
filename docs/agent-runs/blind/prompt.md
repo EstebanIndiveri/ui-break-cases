@@ -36,4 +36,10 @@ Write JSON to `results.json` with this shape:
 
 Use `bug: true` only when `resembles` is `"broken"`. Do not report two different `resembles` / `bug` values for the same `caseId` on one page.
 
-For a **broken** match, `specOutput` must be the Playwright stdout/stderr of the generated spec against that page, **self-reported by the agent; the scorer does not re-run specs**. The scorer requires a Playwright `N failed` summary with no `N passed`, plus an `Error: expect(received)` block that includes `Expected:` / `Received:` lines and an `at file:line` frame. Timeouts, `Test timeout of Nms`, and `Rejected to value` are rejected. A boolean flag is not a substitute. Do not add fields this schema does not define (`specFailedViaExpect`, page-level `specOutput`, `spec`, …).
+For a **broken** match, `specOutput` must be the Playwright stdout/stderr of the generated spec against that page, **self-reported by the agent; the scorer does not re-run specs**. Capture it with `NO_COLOR=1` so the log has no ANSI color codes:
+
+```bash
+NO_COLOR=1 npx playwright test path/to/generated.spec.ts
+```
+
+The scorer strips ANSI if color leaks through. It requires a Playwright `N failed` summary with no `N passed`, plus an `Error: expect(received)` block that includes `Expected:` / `Received:` lines and an `at file:line` frame. Timeouts, `Test timeout of Nms`, and `Rejected to value` are rejected. A boolean flag is not a substitute. Do not add fields this schema does not define (`specFailedViaExpect`, page-level `specOutput`, `spec`, …).

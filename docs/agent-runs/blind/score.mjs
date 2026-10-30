@@ -15,7 +15,8 @@
  *     Playwright failure: `N failed` with no `N passed`, plus
  *     Error: expect(received) with Expected/Received and an `at file:line`
  *     frame (timeouts / "Rejected to value" do not count;
- *     specFailedViaExpect is ignored)
+ *     specFailedViaExpect is ignored). ANSI color codes are stripped
+ *     before those checks (prompt.md asks for NO_COLOR=1).
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -57,10 +58,16 @@ function unknownKeys(value, allowed) {
   return Object.keys(value).filter((key) => !allowed.has(key));
 }
 
+/** Strip CSI / SGR color codes so Playwright's colored reporter still parses. */
+function stripAnsi(text) {
+  return text.replace(/\x1B\[[0-9;]*[ -/]*[@-~]/g, "");
+}
+
 function expectAssertionFailed(output) {
   if (typeof output !== "string" || output.trim().length === 0) {
     return false;
   }
+  output = stripAnsi(output);
   if (
     /Timed out \d+ms/i.test(output) ||
     /Timeout \d+ms/i.test(output) ||

@@ -133,6 +133,56 @@ describe("extractBrokenTest", () => {
       /missing expect\(overlapHeight/,
     );
   });
+
+  it("ignores a line-commented expect(overlapHeight…)", () => {
+    const specText = specWith(
+      BROKEN_TEST.replace(
+        "    expect(overlapHeight(action, footer)).toBeGreaterThan(CLEAR_DEFECT_PX);\n",
+        "    // expect(overlapHeight(action, footer)).toBeGreaterThan(CLEAR_DEFECT_PX);\n",
+      ),
+    );
+    assert.throws(
+      () => extractBrokenTest(specText, SPEC_REL),
+      /missing expect\(overlapHeight/,
+    );
+  });
+
+  it("ignores a block-commented expect(overlapHeight…)", () => {
+    const specText = specWith(
+      BROKEN_TEST.replace(
+        "    expect(overlapHeight(action, footer)).toBeGreaterThan(CLEAR_DEFECT_PX);\n",
+        "    /* expect(overlapHeight(action, footer)).toBeGreaterThan(CLEAR_DEFECT_PX); */\n",
+      ),
+    );
+    assert.throws(
+      () => extractBrokenTest(specText, SPEC_REL),
+      /missing expect\(overlapHeight/,
+    );
+  });
+
+  it("says the hit expect is missing instead of exceeded cap", () => {
+    const padding = Array.from(
+      { length: 30 },
+      (_, i) => `    const pad${i} = ${i};`,
+    ).join("\n");
+    const specText = specWith(
+      BROKEN_TEST.replace(
+        '    expect(hit.hit?.id).toBe("site-footer");\n',
+        `${padding}\n`,
+      ),
+    );
+    assert.throws(
+      () => extractBrokenTest(specText, SPEC_REL),
+      (error) => {
+        assert.match(
+          String(error.message),
+          /missing expect\(hit\.hit\?\.id\)\.toBe\("site-footer"\)/,
+        );
+        assert.doesNotMatch(String(error.message), /exceeded cap/);
+        return true;
+      },
+    );
+  });
 });
 
 describe("hitTestCenter excerpt errors", () => {

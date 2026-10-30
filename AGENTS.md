@@ -24,6 +24,7 @@ npx playwright install --with-deps chromium
 | `npm test` | Build, preview, Playwright Chromium |
 | `npm run check:pages` | `build:pages`, serve `dist/` at `/ui-break-cases/`, assert gallery + assets + 9 fixtures return 200 |
 | `npm run verify:skill` | Classifier + generated templates + control geometry + skill-copy drift |
+| `npm run mutate:classify` | Apply issue #8 classify.ts mutants; report killed / alive / equivalent |
 | `npm run capture:demo` | Playwright screenshots of broken/fixed fixtures + system `ffmpeg` → `docs/media/broken-vs-fixed.gif` |
 | `npm run capture:launch` | Playwright + `ffmpeg` → `docs/media/launch-ubc*.mp4`, `.gif`, `spec-hit-test.png` |
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Scorer: strip ANSI from `specOutput` before parsing; prompt asks for `NO_COLOR=1` when capturing Playwright output.
+- Launch excerpt: ignore commented-out `expect(overlapHeight…)` anchors, and say the hit `expect` is missing instead of `exceeded cap`.
+- Classifier tests: kill remaining bottom-tolerance-0 mutants (N10, N13–N16, N20, N23) and the leftover v0.2 gates (`nextClear`, `action.right`, `rects`, `clip`, `localScroll`, `next-content`). Dropping `action.right` from the flex **fixed** gate is equivalent to `overflow <= tolerance` (documented, not forced). `node scripts/mutate-classify.mjs` reruns that set.
+- Docs: drop the stale “while bc-170139f1 is running” line; stop leaking the blind-run-2 p01 answer; do not reuse that set for Claude Code or Codex.
+
 ## v0.2.0 — 2026-10-29
 
 - Skill / plugin package for coding agents (Cursor, Claude Code, Codex) in `skill/`. `skill/SKILL.md` is the source of truth; Cursor and Codex load the identical copy at `.agents/skills/ui-break-cases/`.
