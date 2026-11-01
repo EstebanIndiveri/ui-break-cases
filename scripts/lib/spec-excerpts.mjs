@@ -13,6 +13,8 @@ const REGEX_AFTER_KEYWORD =
  * Strip // and /* *\/ comments so a commented-out expect is not an anchor.
  * Strings, template literals (including nested `${}` / backticks), and regex
  * literals are copied through so `//` or `/*` inside them is not a comment.
+ * Unterminated quotes and regexes recover at a newline (templates may span
+ * lines). Postfix ++/-- is one token, so a following `/` is division.
  * Newlines inside comments are kept so line indices still line up.
  */
 export function stripJsComments(source) {
@@ -56,8 +58,16 @@ export function stripJsComments(source) {
     if (frame.kind === "squote" || frame.kind === "dquote") {
       out.push(c);
       if (c === "\\" && i + 1 < source.length) {
+        // Includes LineContinuation (`\\` + newline), which stays in the string.
         out.push(source[i + 1]);
         i += 2;
+        continue;
+      }
+      if (c === "\n" || c === "\r") {
+        // Unterminated quote: JS strings cannot span lines, so recover.
+        stack.pop();
+        setCanRegex(false);
+        i += 1;
         continue;
       }
       if (c === (frame.kind === "squote" ? "'" : '"')) {
@@ -92,8 +102,18 @@ export function stripJsComments(source) {
     if (frame.kind === "regex") {
       out.push(c);
       if (c === "\\" && i + 1 < source.length) {
-        out.push(source[i + 1]);
-        i += 2;
+        const next = source[i + 1];
+        // A real newline cannot appear in a regex literal, even escaped.
+        if (next !== "\n" && next !== "\r") {
+          out.push(next);
+          i += 2;
+          continue;
+        }
+      }
+      if (c === "\n" || c === "\r") {
+        stack.pop();
+        setCanRegex(false);
+        i += 1;
         continue;
       }
       if (c === "[" && !frame.inClass) {
@@ -200,6 +220,13 @@ export function stripJsComments(source) {
     out.push(c);
     if (/\s/.test(c)) {
       // whitespace does not change canRegex
+    } else if ((c === "+" || c === "-") && n === c) {
+      // Consume ++ / -- as one token. A following `/` is division, not a
+      // regex (`i++ /foo/` vs `i++ + /foo/`).
+      out.push(n);
+      frame.canRegex = false;
+      i += 2;
+      continue;
     } else if (c === ")" || c === "]" || c === ".") {
       frame.canRegex = false;
     } else {

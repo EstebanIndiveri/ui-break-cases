@@ -200,7 +200,7 @@ function firstUsefulLine(text) {
   );
 }
 
-function classifyRun(result) {
+export function classifyRun(result) {
   const text = `${result.stdout}\n${result.stderr}`;
   const failedMatch = text.match(/(\d+) failed/);
   const passedMatch = text.match(/(\d+) passed/);
@@ -208,10 +208,11 @@ function classifyRun(result) {
   const passed = passedMatch ? Number(passedMatch[1]) : 0;
   const ran =
     /Running \d+ tests/.test(text) || failedMatch != null || passedMatch != null;
+  // Playwright timeout lines only — not a bare "timed out" in notes/errors.
   const timedOut =
     /Test timeout of \d+ms/i.test(text) ||
     /Timeout of \d+ms exceeded/i.test(text) ||
-    /timed out/i.test(text);
+    /\(timed out\)/i.test(text);
   const assertionFail = /Error:\s*expect\(received\)/.test(text);
 
   if (result.code === 0) {

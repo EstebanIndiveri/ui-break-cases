@@ -341,6 +341,57 @@ describe("stripJsComments", () => {
     assert.doesNotMatch(out, /expect\(overlapHeight/);
     assert.match(out, /const x = 1/);
   });
+
+  it("does not enter regex mode after postfix ++, so /* is a comment", () => {
+    const src =
+      "const x = i++ /[/*]expect(overlapHeight)*/ 0;\nexpect(overlapHeight(a, b));\n";
+    const out = stripJsComments(src);
+    assert.equal([...out.matchAll(/expect\(overlapHeight/g)].length, 1);
+    assert.match(out, /expect\(overlapHeight\(a, b\)\)/);
+    assert.match(out, /const x = i\+\+ \/\[ 0;/);
+  });
+
+  it("does not enter regex mode after postfix --, so /* is a comment", () => {
+    const src =
+      "const x = i-- /[/*]expect(overlapHeight)*/ 0;\nexpect(overlapHeight(a, b));\n";
+    const out = stripJsComments(src);
+    assert.equal([...out.matchAll(/expect\(overlapHeight/g)].length, 1);
+    assert.match(out, /expect\(overlapHeight\(a, b\)\)/);
+  });
+
+  it("still treats /regex/ as a regex after binary + following ++", () => {
+    const src =
+      "const x = i++ + /[/*]expect(overlapHeight)/;\nexpect(overlapHeight(a, b));\n";
+    const out = stripJsComments(src);
+    assert.equal([...out.matchAll(/expect\(overlapHeight/g)].length, 2);
+    assert.match(out, /\/\[\/\*\]expect\(overlapHeight\)\//);
+  });
+
+  it("recovers at a newline in an unterminated string so a later // is a comment", () => {
+    const src =
+      'const s = "unterminated\n// expect(overlapHeight)\nexpect(overlapHeight(a, b));\n';
+    const out = stripJsComments(src);
+    assert.equal([...out.matchAll(/expect\(overlapHeight/g)].length, 1);
+    assert.match(out, /expect\(overlapHeight\(a, b\)\)/);
+    assert.doesNotMatch(out, /\/\/ expect/);
+  });
+
+  it("recovers at a newline in an unterminated regex so a later // is a comment", () => {
+    const src =
+      "const re = /unterminated\n// expect(overlapHeight)\nexpect(overlapHeight(a, b));\n";
+    const out = stripJsComments(src);
+    assert.equal([...out.matchAll(/expect\(overlapHeight/g)].length, 1);
+    assert.match(out, /expect\(overlapHeight\(a, b\)\)/);
+    assert.doesNotMatch(out, /\/\/ expect/);
+  });
+
+  it("keeps comment markers inside a template that spans lines", () => {
+    const src =
+      "const s = `unterminated\n// expect(overlapHeight)`;\nexpect(overlapHeight(a, b));\n";
+    const out = stripJsComments(src);
+    assert.equal([...out.matchAll(/expect\(overlapHeight/g)].length, 2);
+    assert.match(out, /\/\/ expect\(overlapHeight\)/);
+  });
 });
 
 describe("paneFlex", () => {
